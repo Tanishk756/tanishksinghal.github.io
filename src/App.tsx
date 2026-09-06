@@ -43,6 +43,7 @@ const AdminAchievementsPage = lazy(() => import('./pages/admin/AdminAchievements
 const AdminCertificationsPage = lazy(() => import('./pages/admin/AdminCertificationsPage').then(m => ({ default: m.AdminCertificationsPage })));
 const AdminOrganizationsPage = lazy(() => import('./pages/admin/AdminOrganizationsPage').then(m => ({ default: m.AdminOrganizationsPage })));
 const AdminMediaPage = lazy(() => import('./pages/admin/AdminMediaPage').then(m => ({ default: m.AdminMediaPage })));
+const AdminContactPage = lazy(() => import('./pages/admin/AdminContactPage').then(m => ({ default: m.AdminContactPage })));
 
 const AppContent = () => {
   const location = useLocation();
@@ -82,6 +83,7 @@ const AppContent = () => {
 
                 {/* Admin CMS Routes */}
                 <Route path="/admin" element={<AdminDashboardPage />} />
+                <Route path="/admin/contact" element={<AdminContactPage />} />
                 <Route path="/admin/profile" element={<AdminProfilePage />} />
                 <Route path="/admin/projects" element={<AdminProjectsPage />} />
                 <Route path="/admin/projects/new" element={<AdminProjectEditorPage />} />

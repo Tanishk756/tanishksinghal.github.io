@@ -183,6 +183,59 @@ export class CMSApiClient {
       body: { action: 'verify_github' },
     });
   }
+
+  // --- Contact & Inquiries Operations ---
+
+  async submitContactForm(payload: {
+    name: string;
+    email: string;
+    organization?: string;
+    phone?: string;
+    subject: string;
+    inquiryType?: string;
+    message: string;
+    website?: string;
+  }) {
+    return this.invokeFunction<{ success: boolean; id?: string; message?: string }>('contact-submit', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  async getContactSubmissions(filter: { status?: string; limit?: number; offset?: number } = {}) {
+    const query: Record<string, string> = {};
+    if (filter.status) query.status = filter.status;
+    if (filter.limit) query.limit = String(filter.limit);
+    if (filter.offset) query.offset = String(filter.offset);
+
+    return this.invokeFunction<any[]>('admin-contact', {
+      method: 'GET',
+      query,
+    });
+  }
+
+  async getContactSubmission(id: string) {
+    return this.invokeFunction<any>('admin-contact', {
+      method: 'GET',
+      query: { id },
+    });
+  }
+
+  async updateContactSubmissionStatus(id: string, status: string) {
+    return this.invokeFunction<any>('admin-contact', {
+      method: 'PUT',
+      query: { id },
+      body: { status },
+    });
+  }
+
+  async deleteContactSubmission(id: string) {
+    return this.invokeFunction<any>('admin-contact', {
+      method: 'DELETE',
+      query: { id },
+    });
+  }
 }
 
 export const cmsApiClient = new CMSApiClient();
+

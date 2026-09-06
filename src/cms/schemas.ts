@@ -231,3 +231,44 @@ export const MediaSchema = ProvenanceSchema.extend({
   associatedContentType: z.string().optional(),
   associatedContentId: z.string().optional(),
 });
+
+// 15. Contact Submission Schemas
+export const ContactSubmissionStatusSchema = z.enum(['new', 'read', 'replied', 'archived']);
+
+export const ContactInquiryTypeSchema = z.enum([
+  'Project / Engineering',
+  'Research / Collaboration',
+  'Speaking / Workshop',
+  'Internship / Career',
+  'Consulting',
+  'Other',
+]);
+
+export const CreateContactSubmissionSchema = z.object({
+  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(120, 'Name cannot exceed 120 characters'),
+  email: z.string().trim().email('Please enter a valid email address').max(254),
+  organization: z.string().trim().max(160, 'Organization cannot exceed 160 characters').optional().or(z.literal('')),
+  phone: z.string().trim().max(40, 'Phone number cannot exceed 40 characters').optional().or(z.literal('')),
+  subject: z.string().trim().min(2, 'Subject must be at least 2 characters').max(200, 'Subject cannot exceed 200 characters'),
+  inquiryType: ContactInquiryTypeSchema.optional().or(z.literal('')),
+  message: z.string().trim().min(10, 'Message must be at least 10 characters').max(5000, 'Message cannot exceed 5000 characters'),
+  website: z.string().optional(), // Honeypot field
+});
+
+export const ContactSubmissionSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  email: z.string(),
+  organization: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  subject: z.string(),
+  inquiry_type: z.string().nullable().optional(),
+  message: z.string(),
+  status: ContactSubmissionStatusSchema,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export type ContactSubmission = z.infer<typeof ContactSubmissionSchema>;
+export type CreateContactSubmissionInput = z.infer<typeof CreateContactSubmissionSchema>;
+

@@ -43,3 +43,10 @@ verify_jwt = false
 
 [functions.public-content]
 verify_jwt = false
+
+[functions.contact-submit]
+verify_jwt = false
+
+[functions.admin-contact]
+verify_jwt = false
+

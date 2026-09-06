@@ -13,6 +13,7 @@ import {
   Building2,
   Image as ImageIcon,
   ShieldCheck,
+  Mail,
   Download,
   Upload,
   RotateCcw,
@@ -37,6 +38,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subti
 
   const navItems = [
     { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
+    { label: 'Contact Inquiries', path: '/admin/contact', icon: Mail },
     { label: 'Profile & Bio', path: '/admin/profile', icon: User },
     { label: 'Projects Archive', path: '/admin/projects', icon: FolderGit2 },
     { label: 'Research Programs', path: '/admin/research', icon: BookOpen },
