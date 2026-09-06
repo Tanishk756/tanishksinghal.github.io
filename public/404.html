@@ -5,8 +5,10 @@
     <title>Tanishk Singhal — Redirecting</title>
     <script type="text/javascript">
       // GitHub Pages SPA Single Page App redirect script
-      var pathSegmentsToKeep = 0;
+      // If hosted on GitHub Pages as a project repository (tanishksinghal.github.io), keep 1 path segment.
+      // If hosted on a custom domain or root user site, keep 0 path segments.
       var l = window.location;
+      var pathSegmentsToKeep = (l.hostname.endsWith('github.io') && l.pathname.split('/')[1] === 'tanishksinghal.github.io') ? 1 : 0;
       l.replace(
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
         l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
@@ -19,3 +21,4 @@
   <body>
   </body>
 </html>
+

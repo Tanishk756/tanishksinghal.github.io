@@ -84,10 +84,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithOtp = async (email: string) => {
     try {
+      const basePath = (import.meta as any).env?.BASE_URL || '/';
+      const adminPath = basePath.endsWith('/') ? `${basePath}admin` : `${basePath}/admin`;
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim().toLowerCase(),
         options: {
-          emailRedirectTo: window.location.origin + '/admin',
+          emailRedirectTo: `${window.location.origin}${adminPath}`,
         },
       });
       return { error };

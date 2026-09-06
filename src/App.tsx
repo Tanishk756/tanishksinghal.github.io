@@ -114,9 +114,10 @@ const AppContent = () => {
 };
 
 export function App() {
+  const basePath = (import.meta as any).env?.BASE_URL || '/';
   return (
     <AuthProvider>
-      <Router>
+      <Router basename={basePath}>
         <ScrollToTop />
         <AppContent />
       </Router>
