@@ -1,34 +1,96 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AdminLayout } from '../../components/admin/AdminLayout';
-import { contentStore, ProjectData } from '../../cms/store';
-import { Plus, Edit, Trash2, Eye, ShieldCheck } from 'lucide-react';
-
+import { cmsApiClient } from '../../cms/apiClient';
+import { ProjectData } from '../../cms/store';
+import { Plus, Edit, Trash2, Eye, ShieldCheck, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 export const AdminProjectsPage: React.FC = () => {
-  const [projects, setProjects] = useState<ProjectData[]>(contentStore.getProjects());
+  const [projects, setProjects] = useState<ProjectData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const handleDelete = (id: string, title: string) => {
-    if (confirm(`Are you sure you want to delete project: "${title}"?`)) {
-      contentStore.deleteProject(id);
-      setProjects(contentStore.getProjects());
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  const loadProjects = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await cmsApiClient.getContentList<ProjectData>('project');
+      if (res.success && Array.isArray(res.data)) {
+        const normalized = res.data.filter(Boolean).map((p: any) => ({
+          ...p,
+          id: String(p.id || `proj-${Date.now()}`),
+          slug: String(p.slug || ''),
+          title: String(p.title || ''),
+          tagline: String(p.tagline || p.subtitle || ''),
+          category: (p.category || 'robotics') as any,
+          subcategories: Array.isArray(p.subcategories) ? p.subcategories : (Array.isArray(p.tools) ? p.tools : []),
+          status: (p.status || 'in-progress') as any,
+          publicationStatus: (p.publicationStatus || p.publication_status || 'draft') as any,
+          featured: Boolean(p.featured),
+          startDate: String(p.startDate || p.start_date || p.timeframe || new Date().getFullYear().toString()),
+          role: String(p.role || ''),
+          overview: String(p.overview || ''),
+          problem: String(p.problem || ''),
+          objective: String(p.objective || p.solution || ''),
+          architecture: String(p.architecture || ''),
+          githubUrl: String(p.githubUrl || p.github_url || ''),
+          demoUrl: String(p.demoUrl || p.demo_url || ''),
+          paperUrl: String(p.paperUrl || p.docs_url || ''),
+          verificationStatus: (p.verificationStatus || p.verification_status || 'USER_PROVIDED') as any,
+          source: String(p.source || 'USER_PROVIDED'),
+          sourceUrl: String(p.sourceUrl || p.source_url || p.evidence_url || ''),
+          lastVerified: String(p.lastVerified || p.last_verified || new Date().toISOString().split('T')[0]),
+          notes: String(p.notes || p.verification_notes || ''),
+        }));
+        setProjects(normalized);
+      } else {
+        setError(res.error || 'Failed to load projects from Supabase.');
+        setProjects([]);
+      }
+    } catch (e: any) {
+      setError(e.message || 'Unexpected network error.');
+      setProjects([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleStatusChange = (project: ProjectData, newStatus: 'draft' | 'published' | 'archived') => {
+  const handleDelete = async (id: string, title: string) => {
+    if (confirm(`Are you sure you want to delete project: "${title}" from Supabase?`)) {
+      setDeletingId(id);
+      const res = await cmsApiClient.deleteContentItem('project', id);
+      if (!res.success) {
+        alert(`Failed to delete: ${res.error || 'Unknown error'}`);
+      } else {
+        await loadProjects();
+      }
+      setDeletingId(null);
+    }
+  };
+
+  const handleStatusChange = async (project: ProjectData, newStatus: 'draft' | 'published' | 'archived') => {
     const updated = { ...project, publicationStatus: newStatus };
-    contentStore.saveProject(updated);
-    setProjects(contentStore.getProjects());
+    const res = await cmsApiClient.updateContentItem('project', project.id, updated);
+    if (!res.success) {
+      alert(`Failed to update status: ${res.error || 'Unknown error'}`);
+    } else {
+      await loadProjects();
+    }
   };
 
   const filtered = projects.filter((p) => {
     const matchesStatus = statusFilter === 'all' || p.publicationStatus === statusFilter;
     const matchesSearch =
-      p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.tagline.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchTerm.toLowerCase());
+      (p.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.tagline || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.category || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
@@ -47,7 +109,22 @@ export const AdminProjectsPage: React.FC = () => {
       }
     >
       <div className="space-y-6">
-        
+        {error && (
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-mono flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+            <button
+              onClick={loadProjects}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-[11px] font-semibold transition-colors"
+            >
+              <RefreshCw className="w-3 h-3" />
+              <span>Retry</span>
+            </button>
+          </div>
+        )}
+
         {/* Filter Controls Bar */}
         <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
           <input
@@ -73,97 +150,108 @@ export const AdminProjectsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Project List Table */}
-        <div className="rounded-2xl bg-white border border-slate-200 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-mono uppercase text-[10px]">
-                <tr>
-                  <th className="p-4">Title & Slug</th>
-                  <th className="p-4">Category</th>
-                  <th className="p-4">Provenance</th>
-                  <th className="p-4">Publication</th>
-                  <th className="p-4">Year</th>
-                  <th className="p-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-sans">
-                {filtered.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="p-4">
-                      <div className="font-semibold text-slate-900 text-sm">{p.title}</div>
-                      <div className="text-[11px] font-mono text-slate-500">/projects/{p.slug}</div>
-                    </td>
-                    <td className="p-4">
-                      <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-[10px] font-mono uppercase font-semibold text-slate-700">
-                        {p.category}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${
-                          p.verificationStatus === 'USER_PROVIDED' || p.verificationStatus === 'GITHUB_VERIFIED'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        <ShieldCheck className="w-3 h-3" />
-                        <span>{p.verificationStatus}</span>
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <select
-                        value={p.publicationStatus || 'published'}
-                        onChange={(e) => handleStatusChange(p, e.target.value as any)}
-                        className={`text-xs font-mono font-semibold rounded-lg px-2 py-1 border outline-none ${
-                          p.publicationStatus === 'published'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                            : p.publicationStatus === 'draft'
-                            ? 'bg-amber-50 text-amber-800 border-amber-300'
-                            : 'bg-slate-100 text-slate-600 border-slate-300'
-                        }`}
-                      >
-                        <option value="published">PUBLISHED</option>
-                        <option value="draft">DRAFT</option>
-                        <option value="archived">ARCHIVED</option>
-                      </select>
-                    </td>
-                    <td className="p-4 font-mono text-slate-500">{p.startDate}</td>
-                    <td className="p-4 text-right space-x-2">
-                      <Link
-                        to={`/projects/${p.slug}`}
-                        target="_blank"
-                        className="inline-flex items-center p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700"
-                        title="View on public site"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </Link>
-                      <Link
-                        to={`/admin/projects/${p.id}/edit`}
-                        className="inline-flex items-center p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white"
-                        title="Edit project details"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(p.id, p.title)}
-                        className="inline-flex items-center p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
-                        title="Delete project"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filtered.length === 0 && (
-              <div className="p-8 text-center text-slate-400 text-xs font-mono">
-                No matching projects found.
-              </div>
-            )}
+        {/* Loading State */}
+        {loading && (
+          <div className="p-12 text-center rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+            <Loader2 className="w-6 h-6 animate-spin text-amber-500 mx-auto" />
+            <p className="text-xs font-mono text-slate-500">Loading canonical projects from Supabase...</p>
           </div>
-        </div>
+        )}
+
+        {/* Project List Table */}
+        {!loading && (
+          <div className="rounded-2xl bg-white border border-slate-200 shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-mono uppercase text-[10px]">
+                  <tr>
+                    <th className="p-4">Title & Slug</th>
+                    <th className="p-4">Category</th>
+                    <th className="p-4">Provenance</th>
+                    <th className="p-4">Publication</th>
+                    <th className="p-4">Year</th>
+                    <th className="p-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-sans">
+                  {filtered.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="p-4">
+                        <div className="font-semibold text-slate-900 text-sm">{p.title}</div>
+                        <div className="text-[11px] font-mono text-slate-500">/projects/{p.slug}</div>
+                      </td>
+                      <td className="p-4">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-[10px] font-mono uppercase font-semibold text-slate-700">
+                          {p.category}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${
+                            p.verificationStatus === 'USER_PROVIDED' || p.verificationStatus === 'GITHUB_VERIFIED' || p.verificationStatus === 'PUBLIC_WEB_VERIFIED'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          <ShieldCheck className="w-3 h-3" />
+                          <span>{p.verificationStatus}</span>
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <select
+                          value={p.publicationStatus || 'draft'}
+                          onChange={(e) => handleStatusChange(p, e.target.value as any)}
+                          className={`text-xs font-mono font-semibold rounded-lg px-2 py-1 border outline-none ${
+                            p.publicationStatus === 'published'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                              : p.publicationStatus === 'draft'
+                              ? 'bg-amber-50 text-amber-800 border-amber-300'
+                              : 'bg-slate-100 text-slate-600 border-slate-300'
+                          }`}
+                        >
+                          <option value="published">PUBLISHED</option>
+                          <option value="draft">DRAFT</option>
+                          <option value="archived">ARCHIVED</option>
+                        </select>
+                      </td>
+                      <td className="p-4 font-mono text-slate-500">{p.startDate}</td>
+                      <td className="p-4 text-right space-x-2">
+                        <Link
+                          to={`/projects/${p.slug}`}
+                          target="_blank"
+                          className="inline-flex items-center p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                          title="View on public site"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </Link>
+                        <Link
+                          to={`/admin/projects/${p.id}/edit`}
+                          className="inline-flex items-center p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition-colors"
+                          title="Edit project details"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(p.id, p.title)}
+                          disabled={deletingId === p.id}
+                          className="inline-flex items-center p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 disabled:opacity-50 transition-colors"
+                          title="Delete project"
+                        >
+                          {deletingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filtered.length === 0 && (
+                <div className="p-8 text-center text-slate-400 text-xs font-mono">
+                  No matching projects stored in Supabase.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
       </div>
     </AdminLayout>

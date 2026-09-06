@@ -282,6 +282,60 @@ export default async function handler(req: Request): Promise<Response> {
       return jsonResponse({ success: false, error: 'Content type required' }, 400);
     }
 
+    if (tableName) {
+      let endpoint = `${tableName}?select=*`;
+      if (idOrSlug) {
+        endpoint += `&or=(id.eq.${encodeURIComponent(idOrSlug)},slug.eq.${encodeURIComponent(idOrSlug)})`;
+      }
+      const restRes = await querySupabaseRest(endpoint);
+      if (restRes.ok && restRes.data) {
+        const rawData = restRes.data;
+        const normalizeItem = (item: any) => {
+          if (!item || typeof item !== 'object') return item;
+          return {
+            ...item,
+            publicationStatus: item.publication_status || item.publicationStatus || 'draft',
+            verificationStatus: item.verification_status || item.verificationStatus || 'USER_PROVIDED',
+            lastVerified: item.last_verified ? String(item.last_verified).split('T')[0] : (item.lastVerified || new Date().toISOString().split('T')[0]),
+            sourceUrl: item.evidence_url || item.source_url || item.sourceUrl || '',
+            source: item.source || 'USER_PROVIDED',
+            domain: item.area || item.domain || '',
+            status: item.status_label || item.status || 'active',
+            problem: item.research_question || item.problem || '',
+            tagline: item.subtitle || item.tagline || '',
+            startDate: item.start_date || item.startDate || item.timeframe || '',
+            endDate: item.end_date || item.endDate || '',
+            employmentType: item.employment_type || item.employmentType || 'Full-time',
+            fullName: item.full_name || item.fullName || '',
+            displayName: item.display_name || item.displayName || '',
+            shortBio: item.short_bio || item.shortBio || '',
+            longBio: item.long_bio || item.longBio || '',
+            websiteUrl: item.website_url || item.websiteUrl || '',
+            publicationType: item.publication_type || item.publicationType || 'journal',
+            pdfUrl: item.pdf_url || item.pdfUrl || '',
+            externalUrl: item.doi_url || item.scholar_url || item.externalUrl || '',
+            authors: Array.isArray(item.authors) ? item.authors : [],
+            keywords: Array.isArray(item.keywords) ? item.keywords : [],
+            responsibilities: Array.isArray(item.responsibilities) ? item.responsibilities : [],
+            technologies: Array.isArray(item.technologies) ? item.technologies : [],
+            subcategories: Array.isArray(item.tools) ? item.tools : (Array.isArray(item.subcategories) ? item.subcategories : []),
+            skills: Array.isArray(item.skills) ? item.skills : [],
+          };
+        };
+
+        const resultData = idOrSlug
+          ? (Array.isArray(rawData) ? (rawData[0] ? normalizeItem(rawData[0]) : null) : normalizeItem(rawData))
+          : (Array.isArray(rawData) ? rawData.map(normalizeItem) : []);
+
+        return jsonResponse({
+          success: true,
+          contentType: rawContentType,
+          tableName,
+          data: resultData,
+        });
+      }
+    }
+
     return jsonResponse({
       success: true,
       contentType: rawContentType,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { AdminLayout } from '../../components/admin/AdminLayout';
-import { contentStore, BlogData } from '../../cms/store';
+import { BlogData } from '../../cms/store';
 import { cmsApiClient } from '../../cms/apiClient';
 import { BlogSchema } from '../../cms/schemas';
 import { TextInput, TextareaInput, ArrayInput, ProvenanceEditor } from '../../components/admin/FormFields';
@@ -33,6 +33,8 @@ export const AdminBlogEditorPage: React.FC = () => {
   const isNew = !id || id === 'new';
 
   const [formData, setFormData] = useState<BlogData>(defaultNewPost);
+  const [loading, setLoading] = useState(!isNew);
+  const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -41,17 +43,23 @@ export const AdminBlogEditorPage: React.FC = () => {
 
   useEffect(() => {
     if (!isNew && id) {
-      const existing = contentStore.getBlogPost(id);
-      if (existing) {
-        setFormData(existing);
-      } else {
-        alert(`Blog post not found: ${id}`);
-        navigate('/admin/blog');
-      }
+      loadPost(id);
     }
-  }, [id, isNew, navigate]);
+  }, [id, isNew]);
 
-  const handleSave = (publishState?: 'draft' | 'approved' | 'archived') => {
+  const loadPost = async (postId: string) => {
+    setLoading(true);
+    const res = await cmsApiClient.getContentItem<BlogData>('blog', postId);
+    if (res.success && res.data) {
+      setFormData(res.data);
+    } else {
+      alert(`Blog post not found: ${postId}`);
+      navigate('/admin/blog');
+    }
+    setLoading(false);
+  };
+
+  const handleSave = async (publishState?: 'draft' | 'approved' | 'archived') => {
     const dataToSave = {
       ...formData,
       publicationStatus: publishState || (formData.publicationStatus === 'published' ? 'approved' : formData.publicationStatus) || 'draft',
@@ -71,7 +79,15 @@ export const AdminBlogEditorPage: React.FC = () => {
     }
 
     setErrors({});
-    contentStore.saveBlogPost(dataToSave);
+    setSaving(true);
+    const res = await cmsApiClient.saveContentItem('blog', dataToSave);
+    setSaving(false);
+
+    if (!res.success) {
+      alert(`Failed to save blog post to Supabase: ${res.error || 'Unknown error'}`);
+      return;
+    }
+
     setSavedSuccess(true);
     setTimeout(() => {
       setSavedSuccess(false);
@@ -95,10 +111,15 @@ export const AdminBlogEditorPage: React.FC = () => {
       return;
     }
     setErrors({});
-    contentStore.saveBlogPost(dataToSave);
+    setPublishing(true);
+    const saveRes = await cmsApiClient.saveContentItem('blog', dataToSave);
+    if (!saveRes.success) {
+      setPublishing(false);
+      alert(`Failed to save blog post before publishing: ${saveRes.error}`);
+      return;
+    }
     setFormData(dataToSave);
 
-    setPublishing(true);
     setPublishMessage(null);
     try {
       const pubRes = await cmsApiClient.publishContentItem(
@@ -109,13 +130,13 @@ export const AdminBlogEditorPage: React.FC = () => {
       );
       setPublishing(false);
       if (pubRes.status === 'PHASE_9_COMMIT_BLOCKED' || pubRes.error?.includes('PHASE_9_COMMIT_BLOCKED') || !pubRes.success) {
-        setPublishMessage("Publication is currently locked (Phase 9 Safety Lock). Content remains Approved.");
+        setPublishMessage("Publication is currently locked (Phase 9 Safety Lock). Content remains Approved in Supabase.");
       } else {
         setPublishMessage(`Published successfully to GitHub (Commit: ${pubRes.commitSha || 'verified'})`);
       }
     } catch {
       setPublishing(false);
-      setPublishMessage("Publication is currently locked. Content remains Approved.");
+      setPublishMessage("Publication is currently locked. Content remains Approved in Supabase.");
     }
   };
 
@@ -156,23 +177,27 @@ export const AdminBlogEditorPage: React.FC = () => {
 
           <button
             type="button"
+            disabled={saving}
             onClick={() => handleSave('draft')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-900 text-xs font-mono font-medium shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-900 text-xs font-mono font-medium shadow-xs disabled:opacity-50"
           >
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             <span>Save Draft</span>
           </button>
 
           <button
             type="button"
+            disabled={saving}
             onClick={() => handleSave('approved')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-mono font-medium shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-mono font-medium shadow-xs disabled:opacity-50"
           >
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             <span>Approve Content</span>
           </button>
 
           <button
             type="button"
-            disabled={publishing}
+            disabled={publishing || saving}
             onClick={handlePublishToWebsite}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
           >
@@ -182,13 +207,19 @@ export const AdminBlogEditorPage: React.FC = () => {
         </div>
       }
     >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSave();
-        }}
-        className="space-y-6"
-      >
+      {loading ? (
+        <div className="p-12 rounded-2xl bg-white border border-slate-200 text-center flex flex-col items-center justify-center gap-3">
+          <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+          <span className="text-xs font-mono text-slate-500">Loading article from Supabase...</span>
+        </div>
+      ) : (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+          className="space-y-6"
+        >
         {publishMessage && (
           <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-mono flex items-center gap-2">
             <Info className="w-4 h-4 text-amber-600 shrink-0" />
@@ -302,6 +333,7 @@ export const AdminBlogEditorPage: React.FC = () => {
           onChange={(provenance) => setFormData((prev) => ({ ...prev, ...provenance }))}
         />
       </form>
+      )}
     </AdminLayout>
   );
 };

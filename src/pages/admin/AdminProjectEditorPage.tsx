@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { AdminLayout } from '../../components/admin/AdminLayout';
-import { contentStore, ProjectData } from '../../cms/store';
+import { ProjectData } from '../../cms/store';
 import { cmsApiClient } from '../../cms/apiClient';
 import { ProjectSchema } from '../../cms/schemas';
 import {
@@ -52,25 +52,59 @@ export const AdminProjectEditorPage: React.FC = () => {
   const navigate = useNavigate();
   const isNew = !id || id === 'new';
 
+  const [loading, setLoading] = useState(!isNew);
   const [formData, setFormData] = useState<ProjectData>(defaultNewProject);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [publishMessage, setPublishMessage] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!isNew && id) {
-      const existing = contentStore.getProject(id);
-      if (existing) {
-        setFormData(existing);
-      } else {
-        alert(`Project not found: ${id}`);
-        navigate('/admin/projects');
-      }
+      loadProject(id);
     }
-  }, [id, isNew, navigate]);
+  }, [id, isNew]);
 
-  const handleSave = (publishState?: 'draft' | 'approved' | 'archived') => {
+  const loadProject = async (projectId: string) => {
+    setLoading(true);
+    const res = await cmsApiClient.getContentItem<ProjectData>('project', projectId);
+    if (res.success && res.data) {
+      const p: any = res.data;
+      setFormData({
+        ...p,
+        id: String(p.id || projectId),
+        slug: String(p.slug || ''),
+        title: String(p.title || ''),
+        tagline: String(p.tagline || p.subtitle || ''),
+        category: (p.category || 'robotics') as any,
+        subcategories: Array.isArray(p.subcategories) ? p.subcategories : (Array.isArray(p.tools) ? p.tools : []),
+        status: (p.status || 'in-progress') as any,
+        publicationStatus: (p.publicationStatus || p.publication_status || 'draft') as any,
+        featured: Boolean(p.featured),
+        startDate: String(p.startDate || p.start_date || p.timeframe || new Date().getFullYear().toString()),
+        role: String(p.role || ''),
+        overview: String(p.overview || ''),
+        problem: String(p.problem || ''),
+        objective: String(p.objective || p.solution || ''),
+        architecture: String(p.architecture || ''),
+        githubUrl: String(p.githubUrl || p.github_url || ''),
+        demoUrl: String(p.demoUrl || p.demo_url || ''),
+        paperUrl: String(p.paperUrl || p.docs_url || ''),
+        verificationStatus: (p.verificationStatus || p.verification_status || 'USER_PROVIDED') as any,
+        source: String(p.source || 'USER_PROVIDED'),
+        sourceUrl: String(p.sourceUrl || p.source_url || p.evidence_url || ''),
+        lastVerified: String(p.lastVerified || p.last_verified || new Date().toISOString().split('T')[0]),
+        notes: String(p.notes || p.verification_notes || ''),
+      });
+    } else {
+      alert(`Project not found in Supabase: ${projectId}`);
+      navigate('/admin/projects');
+    }
+    setLoading(false);
+  };
+
+  const handleSave = async (publishState?: 'draft' | 'approved' | 'archived') => {
     const dataToSave = {
       ...formData,
       publicationStatus: publishState || (formData.publicationStatus === 'published' ? 'approved' : formData.publicationStatus) || 'draft',
@@ -90,7 +124,19 @@ export const AdminProjectEditorPage: React.FC = () => {
     }
 
     setErrors({});
-    contentStore.saveProject(dataToSave);
+    setSaving(true);
+
+    const res = isNew
+      ? await cmsApiClient.saveContentItem('project', dataToSave)
+      : await cmsApiClient.updateContentItem('project', dataToSave.id, dataToSave);
+
+    setSaving(false);
+
+    if (!res.success) {
+      alert(`Failed to save project to Supabase: ${res.error || 'Unknown error'}`);
+      return;
+    }
+
     setSavedSuccess(true);
     setTimeout(() => {
       setSavedSuccess(false);
@@ -114,10 +160,15 @@ export const AdminProjectEditorPage: React.FC = () => {
       return;
     }
     setErrors({});
-    contentStore.saveProject(dataToSave);
+    setPublishing(true);
+    const saveRes = await cmsApiClient.saveContentItem('project', dataToSave);
+    if (!saveRes.success) {
+      setPublishing(false);
+      alert(`Failed to save project before publishing: ${saveRes.error}`);
+      return;
+    }
     setFormData(dataToSave);
 
-    setPublishing(true);
     setPublishMessage(null);
     try {
       const pubRes = await cmsApiClient.publishContentItem(
@@ -177,23 +228,27 @@ export const AdminProjectEditorPage: React.FC = () => {
 
           <button
             type="button"
+            disabled={saving}
             onClick={() => handleSave('draft')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-900 text-xs font-mono font-medium shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-900 text-xs font-mono font-medium shadow-xs disabled:opacity-50"
           >
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             <span>Save Draft</span>
           </button>
 
           <button
             type="button"
+            disabled={saving}
             onClick={() => handleSave('approved')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-mono font-medium shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-mono font-medium shadow-xs disabled:opacity-50"
           >
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             <span>Approve Content</span>
           </button>
 
           <button
             type="button"
-            disabled={publishing}
+            disabled={publishing || saving}
             onClick={handlePublishToWebsite}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
           >
@@ -203,13 +258,19 @@ export const AdminProjectEditorPage: React.FC = () => {
         </div>
       }
     >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSave();
-        }}
-        className="space-y-8"
-      >
+      {loading ? (
+        <div className="p-12 rounded-2xl bg-white border border-slate-200 text-center flex flex-col items-center justify-center gap-3">
+          <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+          <span className="text-xs font-mono text-slate-500">Loading project from Supabase...</span>
+        </div>
+      ) : (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+          className="space-y-8"
+        >
         {/* Error / Success Banner */}
         {publishMessage && (
           <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-mono flex items-center gap-2">
@@ -440,6 +501,7 @@ export const AdminProjectEditorPage: React.FC = () => {
           onChange={(provenance) => setFormData((prev) => ({ ...prev, ...provenance }))}
         />
       </form>
+      )}
     </AdminLayout>
   );
 };
