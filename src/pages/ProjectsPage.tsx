@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { getProductionProjects } from '../content/projects';
+import { getProductionProjects } from '../generated/projects';
 import { ArrowRight, ArrowUpRight, ShieldCheck, FolderGit2 } from 'lucide-react';
 
 export const ProjectsPage: React.FC = () => {

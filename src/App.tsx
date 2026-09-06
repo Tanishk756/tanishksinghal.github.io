@@ -46,6 +46,7 @@ const AdminCertificationsPage = lazy(() => import('./pages/admin/AdminCertificat
 const AdminOrganizationsPage = lazy(() => import('./pages/admin/AdminOrganizationsPage').then(m => ({ default: m.AdminOrganizationsPage })));
 const AdminMediaPage = lazy(() => import('./pages/admin/AdminMediaPage').then(m => ({ default: m.AdminMediaPage })));
 const AdminContactPage = lazy(() => import('./pages/admin/AdminContactPage').then(m => ({ default: m.AdminContactPage })));
+const AdminHistoryPage = lazy(() => import('./pages/admin/AdminHistoryPage').then(m => ({ default: m.AdminHistoryPage })));
 
 const AppContent = () => {
   const location = useLocation();
@@ -111,6 +112,7 @@ const AppContent = () => {
                 <Route path="/admin/blog/:id/edit" element={<AdminBlogEditorPage />} />
                 <Route path="/admin/organizations" element={<AdminOrganizationsPage />} />
                 <Route path="/admin/media" element={<AdminMediaPage />} />
+                <Route path="/admin/history" element={<AdminHistoryPage />} />
 
                 {/* Catch-all 404 */}
                 <Route path="*" element={<NotFoundPage />} />

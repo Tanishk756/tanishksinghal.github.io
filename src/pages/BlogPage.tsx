@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { getProductionBlogPosts } from '../content/blog';
+import { getProductionBlogPosts } from '../generated/blog';
 import { CornerDownRight } from 'lucide-react';
 
 export const BlogPage: React.FC = () => {

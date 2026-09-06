@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { InteractiveCenterpiece } from '../components/ui/InteractiveCenterpiece';
-import { getProductionProjects } from '../content/projects';
-import { getProductionResearch } from '../content/research';
-import { getProductionPublications } from '../content/publications';
-import { getProductionBlogPosts } from '../content/blog';
+import { getProductionProjects } from '../generated/projects';
+import { getProductionResearch } from '../generated/research';
+import { getProductionPublications } from '../generated/publications';
+import { getProductionBlogPosts } from '../generated/blog';
 import { ArrowUpRight, ArrowRight, ShieldCheck, CornerDownRight } from 'lucide-react';
 
 export const HomePage: React.FC = () => {

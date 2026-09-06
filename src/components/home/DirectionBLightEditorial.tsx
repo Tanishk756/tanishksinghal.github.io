@@ -2,8 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowUpRight, MoveRight } from 'lucide-react';
-import { profileData } from '../../content/profile';
-import { getProductionProjects } from '../../content/projects';
+import { profileData } from '../../generated/profile';
+import { getProductionProjects } from '../../generated/projects';
 
 export const DirectionBLightEditorial: React.FC = () => {
   const featuredProjects = getProductionProjects().slice(0, 2);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { profileData } from '../content/profile';
+import { profileData } from '../generated/profile';
 import { Mail, Github, Linkedin, ArrowUpRight, MapPin, Calendar, Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { cmsApiClient } from '../cms/apiClient';
 

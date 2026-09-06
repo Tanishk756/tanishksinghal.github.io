@@ -1,5 +1,5 @@
 import React from 'react';
-import { getProductionAchievements } from '../content/achievements';
+import { getProductionAchievements } from '../generated/achievements';
 import { ShieldCheck, Info } from 'lucide-react';
 
 export const AchievementsPage: React.FC = () => {

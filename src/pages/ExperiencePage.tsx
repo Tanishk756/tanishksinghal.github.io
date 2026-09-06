@@ -1,5 +1,5 @@
 import React from 'react';
-import { getProductionExperience } from '../content/experience';
+import { getProductionExperience } from '../generated/experience';
 import { ShieldCheck } from 'lucide-react';
 
 export const ExperiencePage: React.FC = () => {

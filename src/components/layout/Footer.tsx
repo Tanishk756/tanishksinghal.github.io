@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Github, ShieldCheck, ArrowUp } from 'lucide-react';
-import { profileData } from '../../content/profile';
+import { profileData } from '../../generated/profile';
 
 export const Footer: React.FC = () => {
   const scrollToTop = () => {

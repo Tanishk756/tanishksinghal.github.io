@@ -1,5 +1,5 @@
 import React from 'react';
-import { getProductionPatents } from '../content/patents';
+import { getProductionPatents } from '../generated/patents';
 import { ShieldCheck, Info } from 'lucide-react';
 
 export const PatentsPage: React.FC = () => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { getProductionResearch } from '../content/research';
+import { getProductionResearch } from '../generated/research';
 import { ArrowUpRight, ShieldCheck } from 'lucide-react';
 
 export const ResearchPage: React.FC = () => {

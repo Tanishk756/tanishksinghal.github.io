@@ -1,5 +1,5 @@
 import React from 'react';
-import { getProductionSkills } from '../content/skills';
+import { getProductionSkills } from '../generated/skills';
 import { ShieldCheck } from 'lucide-react';
 
 export const SkillsPage: React.FC = () => {

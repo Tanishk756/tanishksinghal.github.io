@@ -1,7 +1,7 @@
 import React from 'react';
-import { profileData } from '../content/profile';
-import { getProductionOrganizations } from '../content/organizations';
-import { getProductionEducation } from '../content/education';
+import { profileData } from '../generated/profile';
+import { getProductionOrganizations } from '../generated/organizations';
+import { getProductionEducation } from '../generated/education';
 import { Github, Mail, Linkedin } from 'lucide-react';
 
 export const AboutPage: React.FC = () => {

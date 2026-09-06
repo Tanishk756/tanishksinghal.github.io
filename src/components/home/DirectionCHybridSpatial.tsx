@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { ArrowUpRight, ArrowRight, Layers, Compass, BrainCircuit, Cpu } from 'lucide-react';
-import { getProductionProjects } from '../../content/projects';
+import { getProductionProjects } from '../../generated/projects';
 
 // 3D Spatial Tilt Container
 const SpatialHeroCard: React.FC = () => {

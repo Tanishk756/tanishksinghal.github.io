@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getBlogPostBySlug } from '../content/blog';
+import { getBlogPostBySlug } from '../generated/blog';
 import { Breadcrumbs } from '../components/layout/Breadcrumbs';
 import { ArrowLeft, Clock, Calendar, ShieldCheck } from 'lucide-react';
 

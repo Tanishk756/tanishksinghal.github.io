@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getProductionPatents } from '../content/patents';
+import { getProductionPatents } from '../generated/patents';
 import { Breadcrumbs } from '../components/layout/Breadcrumbs';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 

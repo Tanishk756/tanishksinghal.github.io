@@ -1,5 +1,5 @@
 import React from 'react';
-import { getProductionCertifications } from '../content/certifications';
+import { getProductionCertifications } from '../generated/certifications';
 import { ShieldCheck, Info } from 'lucide-react';
 
 export const CertificationsPage: React.FC = () => {

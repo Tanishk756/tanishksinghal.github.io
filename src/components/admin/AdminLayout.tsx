@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   ShieldCheck,
   Mail,
+  History,
   Download,
   Upload,
   RotateCcw,
@@ -51,6 +52,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subti
     { label: 'Certifications', path: '/admin/certifications', icon: BadgeCheck },
     { label: 'Organizations', path: '/admin/organizations', icon: Building2 },
     { label: 'Media Registry', path: '/admin/media', icon: ImageIcon },
+    { label: 'History & Audit', path: '/admin/history', icon: History },
   ];
 
   const handleExportJSON = () => {

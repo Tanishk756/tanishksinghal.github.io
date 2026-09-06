@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getPublicationBySlug } from '../content/publications';
+import { getPublicationBySlug } from '../generated/publications';
 import { Breadcrumbs } from '../components/layout/Breadcrumbs';
 import { ArrowLeft, ArrowUpRight, ShieldCheck } from 'lucide-react';
 

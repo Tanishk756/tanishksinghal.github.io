@@ -2,8 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowUpRight, ArrowRight, MoveRight } from 'lucide-react';
-import { profileData } from '../../content/profile';
-import { getProductionProjects } from '../../content/projects';
+import { profileData } from '../../generated/profile';
+import { getProductionProjects } from '../../generated/projects';
 
 // Interactive Kinetic Canvas Centerpiece
 const KineticCanvas: React.FC = () => {

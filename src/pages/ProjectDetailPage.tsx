@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getProjectBySlug } from '../content/projects';
+import { getProjectBySlug } from '../generated/projects';
 import { Breadcrumbs } from '../components/layout/Breadcrumbs';
 import { ArrowLeft, ArrowUpRight, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 

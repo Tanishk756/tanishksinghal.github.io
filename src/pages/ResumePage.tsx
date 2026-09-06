@@ -1,9 +1,9 @@
 import React from 'react';
-import { profileData } from '../content/profile';
-import { getProductionExperience } from '../content/experience';
-import { getProductionSkills } from '../content/skills';
-import { getProductionProjects } from '../content/projects';
-import { getProductionEducation } from '../content/education';
+import { profileData } from '../generated/profile';
+import { getProductionExperience } from '../generated/experience';
+import { getProductionSkills } from '../generated/skills';
+import { getProductionProjects } from '../generated/projects';
+import { getProductionEducation } from '../generated/education';
 import { Printer } from 'lucide-react';
 
 export const ResumePage: React.FC = () => {

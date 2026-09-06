@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { getProductionPublications } from '../content/publications';
+import { getProductionPublications } from '../generated/publications';
 import { ArrowUpRight, ShieldCheck, BookOpen } from 'lucide-react';
 
 export const PublicationsPage: React.FC = () => {

@@ -235,7 +235,58 @@ export class CMSApiClient {
       query: { id },
     });
   }
+
+  // --- Version History & Rollback Operations ---
+
+  async getVersionHistory(contentType: string, id: string) {
+    return this.invokeFunction<any>('admin-content', {
+      method: 'GET',
+      query: { action: 'history', type: contentType, id },
+    });
+  }
+
+  async rollbackVersion(contentType: string, id: string, versionNumber: number) {
+    return this.invokeFunction<any>('admin-content', {
+      method: 'POST',
+      query: { action: 'rollback', type: contentType, id },
+      body: { versionNumber },
+    });
+  }
+
+  // --- Content Relationships Operations ---
+
+  async getRelationships(contentType: string, id: string) {
+    return this.invokeFunction<any[]>('admin-content', {
+      method: 'GET',
+      query: { action: 'relationships', type: contentType, id },
+    });
+  }
+
+  async createRelationship(payload: {
+    sourceType: string;
+    sourceId: string;
+    targetType: string;
+    targetId: string;
+    relationshipType?: string;
+  }) {
+    return this.invokeFunction<any>('admin-content', {
+      method: 'POST',
+      query: { action: 'relationships' },
+      body: payload,
+    });
+  }
+
+  // --- Diagnostics & URL Health ---
+
+  async checkUrlHealth(url: string) {
+    return this.invokeFunction<{ url: string; status: string; statusCode: number }>('admin-content', {
+      method: 'POST',
+      query: { action: 'health-check' },
+      body: { url },
+    });
+  }
 }
 
 export const cmsApiClient = new CMSApiClient();
+
 
