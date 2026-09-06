@@ -1,0 +1,45 @@
+# Supabase Configuration for Tanishk Singhal Portfolio CMS
+project_id = "tanishk-portfolio-cms"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[auth]
+enabled = true
+site_url = "https://admin.tanishksinghal.com"
+additional_redirect_urls = ["http://localhost:5173", "http://localhost:5173/admin"]
+jwt_expiry = 3600
+enable_signup = false
+
+[auth.email]
+enable_signup = false
+enable_confirmations = true
+otp_expiry = 3600
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[functions.admin-content]
+verify_jwt = false
+
+[functions.admin-publish]
+verify_jwt = false
+
+[functions.admin-media]
+verify_jwt = false
+
+[functions.admin-audit]
+verify_jwt = false
+
+[functions.public-content]
+verify_jwt = false

@@ -1,0 +1,28 @@
+name = "tanishk-portfolio-cms-api"
+main = "src/index.ts"
+compatibility_date = "2024-04-01"
+
+# Cloudflare D1 Database Binding
+[[d1_databases]]
+binding = "DB"
+database_name = "portfolio-cms-db"
+database_id = "1d98dc68-51af-41bc-824b-d06210da2ebf"
+
+# Non-sensitive Environment Variables
+[vars]
+ENVIRONMENT = "production"
+ALLOWED_ORIGIN = "https://admin.tanishksinghal.com"
+AUTHORIZED_EMAILS = "Tanishksinghal6285@gmail.com"
+GITHUB_REPO_OWNER = "Tanishk756"
+GITHUB_REPO_NAME = "tanishksinghal.github.io"
+GITHUB_REPO_BRANCH = "main"
+RATE_LIMIT_MAX_REQUESTS = "120"
+RATE_LIMIT_WINDOW_SECONDS = "60"
+
+# Note on Sensitive Secrets (Do NOT put values in this file!):
+# Set these securely via Cloudflare Dashboard or `npx wrangler secret put <SECRET_NAME>`:
+# - GITHUB_APP_ID
+# - GITHUB_APP_INSTALLATION_ID
+# - GITHUB_APP_PRIVATE_KEY_PEM
+# - CLOUDFLARE_ACCESS_TEAM_DOMAIN
+# - CLOUDFLARE_ACCESS_AUD_TAG

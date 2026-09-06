@@ -1,0 +1,222 @@
+import React, { useState } from 'react';
+import { AdminLayout } from '../../components/admin/AdminLayout';
+import { contentStore, PatentData } from '../../cms/store';
+import { PatentSchema } from '../../cms/schemas';
+import { TextInput, TextareaInput, SelectInput, ArrayInput, ProvenanceEditor } from '../../components/admin/FormFields';
+import { Plus, Edit, Trash2, ShieldCheck, CheckCircle2 } from 'lucide-react';
+
+export const AdminPatentsPage: React.FC = () => {
+  const [patents, setPatents] = useState<PatentData[]>(contentStore.getPatents());
+  const [editingItem, setEditingItem] = useState<PatentData | null>(null);
+  const [isNew, setIsNew] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const handleStartCreate = () => {
+    setIsNew(true);
+    setEditingItem({
+      id: `pat-${Date.now()}`,
+      slug: '',
+      title: '',
+      inventors: ['Tanishk Singhal'],
+      jurisdiction: 'India / International',
+      status: 'in-preparation',
+      publicationStatus: 'draft',
+      abstract: '',
+      source: 'USER_PROVIDED',
+      sourceUrl: '',
+      verificationStatus: 'USER_PROVIDED',
+      lastVerified: new Date().toISOString().split('T')[0],
+      notes: '',
+    });
+  };
+
+  const handleSave = (item: PatentData) => {
+    try {
+      PatentSchema.parse(item);
+      contentStore.savePatent(item);
+      setPatents(contentStore.getPatents());
+      setEditingItem(null);
+      setIsNew(false);
+      setNotice('Patent record saved.');
+      setTimeout(() => setNotice(null), 3000);
+    } catch (e: any) {
+      alert(`Validation Error: ${e.errors?.[0]?.message || e.message}`);
+    }
+  };
+
+  const handleDelete = (id: string, title: string) => {
+    if (confirm(`Delete patent record: "${title}"?`)) {
+      contentStore.deletePatent(id);
+      setPatents(contentStore.getPatents());
+    }
+  };
+
+  return (
+    <AdminLayout
+      title="Intellectual Property & Patents Management"
+      subtitle="Manage patent filings, disclosures, and patent application numbers with strict provenance"
+      action={
+        <button
+          onClick={handleStartCreate}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-medium shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          <span>New Patent Entry</span>
+        </button>
+      }
+    >
+      <div className="space-y-6">
+        {notice && (
+          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-mono flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>{notice}</span>
+          </div>
+        )}
+
+        {editingItem && (
+          <div className="p-6 rounded-2xl bg-white border border-slate-300 shadow-lg space-y-5 animate-in fade-in duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-slate-900 font-mono uppercase">
+                {isNew ? 'New Patent Entry' : `Edit Patent: ${editingItem.title}`}
+              </h3>
+              <button onClick={() => setEditingItem(null)} className="text-xs font-mono text-slate-400">
+                Close ✕
+              </button>
+            </div>
+
+            <TextInput
+              label="Invention Title"
+              value={editingItem.title}
+              onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
+              required
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <TextInput
+                label="Slug"
+                value={editingItem.slug}
+                onChange={(e) => setEditingItem({ ...editingItem, slug: e.target.value })}
+                required
+              />
+              <SelectInput
+                label="Status"
+                value={editingItem.status}
+                onChange={(e) => setEditingItem({ ...editingItem, status: e.target.value as any })}
+                options={[
+                  { value: 'in-preparation', label: 'In Preparation' },
+                  { value: 'provisional', label: 'Provisional' },
+                  { value: 'filed', label: 'Filed / Pending' },
+                  { value: 'granted', label: 'Granted' },
+                ]}
+                required
+              />
+              <TextInput
+                label="Jurisdiction"
+                value={editingItem.jurisdiction}
+                onChange={(e) => setEditingItem({ ...editingItem, jurisdiction: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <TextInput
+                label="Patent / Application Identifier (if granted/filed)"
+                value={editingItem.patentNumber || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, patentNumber: e.target.value })}
+                placeholder="e.g. 202411000000"
+              />
+              <TextInput
+                label="Filing Date"
+                value={editingItem.filingDate || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, filingDate: e.target.value })}
+                placeholder="YYYY-MM-DD"
+              />
+            </div>
+
+            <ArrayInput
+              label="Inventors"
+              values={editingItem.inventors}
+              onChange={(inventors) => setEditingItem({ ...editingItem, inventors })}
+            />
+
+            <TextareaInput
+              label="Invention Abstract"
+              value={editingItem.abstract}
+              onChange={(e) => setEditingItem({ ...editingItem, abstract: e.target.value })}
+              required
+              rows={3}
+            />
+
+            <ProvenanceEditor
+              data={editingItem}
+              onChange={(provenance) => setEditingItem({ ...editingItem, ...provenance })}
+            />
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-mono"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSave(editingItem)}
+                className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-medium shadow-sm"
+              >
+                Save Entry
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {patents.map((pat) => (
+            <div key={pat.id} className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <span className="text-xs font-mono uppercase font-semibold text-slate-500">
+                  {pat.jurisdiction} · {pat.status.toUpperCase()}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold ${
+                      pat.verificationStatus === 'USER_PROVIDED' || pat.verificationStatus === 'PUBLIC_WEB_VERIFIED'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}
+                  >
+                    <ShieldCheck className="w-3 h-3" />
+                    <span>{pat.verificationStatus}</span>
+                  </span>
+                  <button
+                    onClick={() => {
+                      setIsNew(false);
+                      setEditingItem(pat);
+                    }}
+                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(pat.id, pat.title)}
+                    className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+              <h3 className="text-base font-bold text-slate-900">{pat.title}</h3>
+              <p className="text-xs text-slate-600 font-sans">{pat.abstract}</p>
+            </div>
+          ))}
+          {patents.length === 0 && (
+            <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center text-xs font-mono text-slate-400">
+              No patent records in database. Public site displays verified neutral empty state.
+            </div>
+          )}
+        </div>
+      </div>
+    </AdminLayout>
+  );
+};
