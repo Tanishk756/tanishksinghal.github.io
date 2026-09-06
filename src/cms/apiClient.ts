@@ -12,9 +12,7 @@
  * NEVER logs JWT tokens, passwords, service-role keys, or private keys.
  */
 
-import { supabase } from './supabaseClient';
-
-const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || 'https://fpjaijgbcdalrdgwbece.supabase.co';
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from './supabaseClient';
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -71,11 +69,14 @@ export class CMSApiClient {
       const endpoint = `${SUPABASE_URL}/functions/v1/${functionName}${queryString}`;
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
         ...(options.headers || {}),
       };
 
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
       }
 
       const res = await fetch(endpoint, {
