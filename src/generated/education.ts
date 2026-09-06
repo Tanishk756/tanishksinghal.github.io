@@ -3,49 +3,7 @@
 
 import { EducationItem } from '../types/content';
 
-export const educationData: EducationItem[] = [
-  {
-    "id": "88a5fb9d-fdc4-4a07-b40c-bec0c79c5b1b",
-    "institution": "Lovely Professional University",
-    "program": "B.Tech, Robotics and Automation",
-    "degree": "B.Tech, Robotics and Automation",
-    "fieldOfStudy": "B.Tech, Robotics and Automation",
-    "startDate": "Aug 2022",
-    "endDate": "May 2026",
-    "publicEligibility": true,
-    "source": "Supabase Canonical single-source-of-truth",
-    "verificationStatus": "USER_PROVIDED",
-    "lastVerified": "2026-09-06T17:49:13.219+00:00"
-  },
-  {
-    "id": "3ebc6001-fa75-4707-a26a-122fc830620f",
-    "institution": "Board of Secondary Education Rajasthan",
-    "program": "Senior Secondary Education, Student",
-    "degree": "Senior Secondary Education, Student",
-    "fieldOfStudy": "Senior Secondary Education, Student",
-    "startDate": "2021",
-    "endDate": "2022",
-    "grade": "95.80%",
-    "publicEligibility": true,
-    "source": "Supabase Canonical single-source-of-truth",
-    "verificationStatus": "USER_PROVIDED",
-    "lastVerified": "2026-09-06T17:49:13.219+00:00"
-  },
-  {
-    "id": "e3ba4b37-c010-4d8b-92e1-a5cdc526b7c3",
-    "institution": "Board of Secondary Education Rajasthan",
-    "program": "Secondary Education, Student",
-    "degree": "Secondary Education, Student",
-    "fieldOfStudy": "Secondary Education, Student",
-    "startDate": "2019",
-    "endDate": "2020",
-    "grade": "94.66%",
-    "publicEligibility": true,
-    "source": "Supabase Canonical single-source-of-truth",
-    "verificationStatus": "USER_PROVIDED",
-    "lastVerified": "2026-09-06T17:49:13.219+00:00"
-  }
-];
+export const educationData: EducationItem[] = [];
 
 export function getProductionEducation(): EducationItem[] {
   return educationData;

@@ -17,21 +17,29 @@ interface PublishedDataset {
   blog_posts: any[];
 }
 
+export function filterEligibleRecords<T extends { publication_status?: string; verification_status?: string }>(records: T[]): T[] {
+  const allowedProvenance = ['USER_PROVIDED', 'GITHUB_VERIFIED', 'PUBLIC_WEB_VERIFIED'];
+  return (records || []).filter(
+    r => r.publication_status === 'published' && allowedProvenance.includes(r.verification_status || '')
+  );
+}
+
 export function fetchPublishedData(): PublishedDataset {
+  const allowed = "('USER_PROVIDED', 'GITHUB_VERIFIED', 'PUBLIC_WEB_VERIFIED')";
   const sql = `
     SELECT json_build_object(
-      'profiles', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.profiles ORDER BY id) r),
-      'education', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.education ORDER BY display_order, id) r),
-      'experience', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.experience ORDER BY display_order, id) r),
-      'projects', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.projects ORDER BY display_order, slug) r),
-      'research_programs', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.research_programs ORDER BY display_order, slug) r),
-      'publications', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.publications ORDER BY display_order, slug) r),
-      'patents', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.patents ORDER BY display_order, slug) r),
-      'achievements', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.achievements ORDER BY display_order, id) r),
-      'certifications', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.certifications ORDER BY display_order, id) r),
-      'skills', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.skills ORDER BY display_order, name) r),
-      'organizations', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.organizations ORDER BY display_order, id) r),
-      'blog_posts', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.blog_posts ORDER BY display_order, slug) r)
+      'profiles', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.profiles WHERE publication_status = 'published' AND verification_status IN ${allowed} ORDER BY id) r),
+      'education', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.education WHERE publication_status = 'published' AND verification_status IN ${allowed} ORDER BY display_order, id) r),
+      'experience', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.experience WHERE publication_status = 'published' AND verification_status IN ${allowed} ORDER BY display_order, id) r),
+      'projects', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.projects WHERE publication_status = 'published' AND verification_status IN ${allowed} ORDER BY display_order, slug) r),
+      'research_programs', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.research_programs WHERE publication_status = 'published' AND verification_status IN ${allowed} ORDER BY display_order, slug) r),
+      'publications', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.publications WHERE publication_status = 'published' AND verification_status IN ${allowed} ORDER BY display_order, slug) r),
+      'patents', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.patents WHERE publication_status = 'published' AND verification_status IN ${allowed} ORDER BY display_order, slug) r),
+      'achievements', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.achievements WHERE publication_status = 'published' AND verification_status IN ${allowed} ORDER BY display_order, id) r),
+      'certifications', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.certifications WHERE publication_status = 'published' AND verification_status IN ${allowed} ORDER BY display_order, id) r),
+      'skills', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.skills WHERE publication_status = 'published' AND verification_status IN ${allowed} ORDER BY display_order, name) r),
+      'organizations', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.organizations WHERE publication_status = 'published' AND verification_status IN ${allowed} ORDER BY display_order, id) r),
+      'blog_posts', (SELECT coalesce(json_agg(r), '[]'::json) FROM (SELECT * FROM public.blog_posts WHERE publication_status = 'published' AND verification_status IN ${allowed} ORDER BY display_order, slug) r)
     ) as data;
   `;
 
@@ -45,15 +53,49 @@ export function fetchPublishedData(): PublishedDataset {
   return parsed.rows[0].data;
 }
 
+export function normalizeStringArray(val: any): string[] {
+  if (!val) return [];
+  if (Array.isArray(val)) {
+    return val
+      .flatMap(v => normalizeStringArray(v))
+      .filter(v => typeof v === 'string' && v.trim().length > 0 && v !== '[]' && v !== 'null');
+  }
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (trimmed === '[]' || trimmed === 'null' || trimmed.length === 0) return [];
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return normalizeStringArray(parsed);
+      } catch {}
+    }
+    return [trimmed];
+  }
+  return [];
+}
+
 export function compileCanonicalFiles(dataset: PublishedDataset, outputDir: string) {
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
+  const cleanProfiles = filterEligibleRecords(dataset.profiles);
+  const cleanEducation = filterEligibleRecords(dataset.education);
+  const cleanExperience = filterEligibleRecords(dataset.experience);
+  const cleanProjects = filterEligibleRecords(dataset.projects);
+  const cleanResearch = filterEligibleRecords(dataset.research_programs);
+  const cleanPublications = filterEligibleRecords(dataset.publications);
+  const cleanPatents = filterEligibleRecords(dataset.patents);
+  const cleanAchievements = filterEligibleRecords(dataset.achievements);
+  const cleanCertifications = filterEligibleRecords(dataset.certifications);
+  const cleanSkills = filterEligibleRecords(dataset.skills);
+  const cleanOrganizations = filterEligibleRecords(dataset.organizations);
+  const cleanBlogPosts = filterEligibleRecords(dataset.blog_posts);
+
   const generatedFiles: string[] = [];
 
   // 1. Profile
-  const profile = dataset.profiles[0] || {};
+  const profile = cleanProfiles[0] || {};
   const profileTs = `// @generated by Supabase Master CMS Compiler (Deterministic)
 // Canonical Single Source of Truth: public.profiles
 
@@ -97,7 +139,7 @@ export const profileData: Profile = ${JSON.stringify({
 import { EducationItem } from '../types/content';
 
 export const educationData: EducationItem[] = ${JSON.stringify(
-  dataset.education.map(e => ({
+  cleanEducation.map(e => ({
     id: e.id,
     institution: e.institution,
     program: e.degree || e.field,
@@ -131,21 +173,21 @@ export function getProductionEducation(): EducationItem[] {
 import { ExperienceItem } from '../types/content';
 
 export const experienceData: ExperienceItem[] = ${JSON.stringify(
-  dataset.experience.map(exp => ({
+  cleanExperience.map(exp => ({
     id: exp.id,
-    slug: exp.organization.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    slug: (exp.organization || '').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     organization: exp.organization,
     role: exp.role_title || exp.role,
     type: 'EMPLOYMENT',
     startDate: exp.start_date,
     endDate: exp.end_date || 'Present',
-    current: exp.is_current,
-    isCurrent: exp.is_current,
+    current: exp.is_current ?? true,
+    isCurrent: exp.is_current ?? true,
     location: exp.location || 'India',
     workMode: exp.work_mode === 'on_site' ? 'On-site' : (exp.work_mode === 'hybrid' ? 'Hybrid' : 'Remote'),
     domain: 'Robotics & AI',
-    description: exp.description ? [exp.description] : [],
-    technologies: exp.technologies || [],
+    description: normalizeStringArray(exp.description),
+    technologies: normalizeStringArray(exp.technologies),
     source: 'Supabase Canonical single-source-of-truth',
     verificationStatus: exp.verification_status || 'USER_PROVIDED',
     publicEligibility: true,
@@ -179,13 +221,13 @@ export function getProductionExperience(): ExperienceItem[] {
 import { ProjectCaseStudy } from '../types/content';
 
 export const projectsData: ProjectCaseStudy[] = ${JSON.stringify(
-  dataset.projects.map(p => ({
+  cleanProjects.map(p => ({
     id: p.slug,
     slug: p.slug,
     title: p.title,
     tagline: p.subtitle || p.overview || p.title,
     category: mapProjectCategory(p.category),
-    subcategories: p.software_stack || [],
+    subcategories: normalizeStringArray(p.software_stack),
     status: 'completed',
     featured: p.featured || false,
     startDate: p.timeframe || '2024',
@@ -197,13 +239,13 @@ export const projectsData: ProjectCaseStudy[] = ${JSON.stringify(
     approach: p.solution || p.overview || p.title,
     architectureDescription: p.architecture || '',
     subsystems: p.subsystems || [],
-    hardwareStack: p.hardware_specs || [],
-    softwareStack: p.software_stack || [],
-    algorithms: p.algorithms || [],
+    hardwareStack: normalizeStringArray(p.hardware_specs),
+    softwareStack: normalizeStringArray(p.software_stack),
+    algorithms: normalizeStringArray(p.algorithms),
     challenges: (p.challenges || []).map((c: any) => typeof c === 'string' ? { challenge: c, rootCause: '', solution: '', outcome: '' } : c),
     results: { summary: Array.isArray(p.results) ? p.results : [] },
-    lessonsLearned: p.limitations || [],
-    futureWork: p.future_work || [],
+    lessonsLearned: normalizeStringArray(p.limitations),
+    futureWork: normalizeStringArray(p.future_work),
     githubUrl: p.github_url || undefined,
     source: 'Supabase Canonical single-source-of-truth',
     verificationStatus: p.verification_status || 'GITHUB_VERIFIED',
@@ -231,17 +273,17 @@ export function getProjectBySlug(slug: string): ProjectCaseStudy | undefined {
 import { ResearchItem } from '../types/content';
 
 export const researchData: ResearchItem[] = ${JSON.stringify(
-  dataset.research_programs.map(r => ({
+  cleanResearch.map(r => ({
     id: r.slug,
     slug: r.slug,
     title: r.title,
     domain: r.research_area || r.area || 'Robotics & Control',
     organization: 'Autonomous Systems Research',
-    collaborators: r.collaborators || [],
+    collaborators: normalizeStringArray(r.collaborators),
     dateRange: '2023 — Present',
     summary: r.summary || r.title,
     methodology: r.methodology || r.approach || 'Empirical formulation and simulation evaluation.',
-    contributions: r.key_contribution ? [r.key_contribution] : (r.contribution ? [r.contribution] : [r.title]),
+    contributions: normalizeStringArray(r.key_contribution || r.contribution || r.contributions || [r.title]),
     source: 'Supabase Canonical single-source-of-truth',
     verificationStatus: r.verification_status || 'USER_PROVIDED',
     lastVerified: r.last_verified,
@@ -264,15 +306,15 @@ export function getProductionResearch(): ResearchItem[] {
 import { PublicationItem } from '../types/content';
 
 export const publicationsData: PublicationItem[] = ${JSON.stringify(
-  dataset.publications.map(pub => ({
+  cleanPublications.map(pub => ({
     id: pub.slug,
     slug: pub.slug,
     title: pub.title,
-    authors: pub.authors || ['Tanishk Singhal'],
+    authors: normalizeStringArray(pub.authors).length > 0 ? normalizeStringArray(pub.authors) : ['Tanishk Singhal'],
     venue: pub.venue,
     year: pub.year || 2024,
     abstract: pub.abstract,
-    keywords: pub.keywords || [],
+    keywords: normalizeStringArray(pub.keywords),
     doi: pub.doi || undefined,
     pdfUrl: pub.pdf_asset_url || pub.pdf_url || undefined,
     doiUrl: pub.doi ? ('https://doi.org/' + pub.doi) : undefined,
@@ -302,7 +344,7 @@ export function getPublicationBySlug(slug: string): PublicationItem | undefined 
 
 import { PatentItem } from '../types/content';
 
-export const patentsData: PatentItem[] = ${JSON.stringify(dataset.patents || [], null, 2)};
+export const patentsData: PatentItem[] = ${JSON.stringify(cleanPatents || [], null, 2)};
 
 export function getProductionPatents(): PatentItem[] {
   return patentsData;
@@ -321,7 +363,7 @@ export function getPatentBySlug(slug: string): PatentItem | undefined {
 
 import { AchievementItem } from '../types/content';
 
-export const achievementsData: AchievementItem[] = ${JSON.stringify(dataset.achievements || [], null, 2)};
+export const achievementsData: AchievementItem[] = ${JSON.stringify(cleanAchievements || [], null, 2)};
 
 export function getProductionAchievements(): AchievementItem[] {
   return achievementsData;
@@ -336,7 +378,7 @@ export function getProductionAchievements(): AchievementItem[] {
 
 import { CertificationItem } from '../types/content';
 
-export const certificationsData: CertificationItem[] = ${JSON.stringify(dataset.certifications || [], null, 2)};
+export const certificationsData: CertificationItem[] = ${JSON.stringify(cleanCertifications || [], null, 2)};
 
 export function getProductionCertifications(): CertificationItem[] {
   return certificationsData;
@@ -363,7 +405,7 @@ export function getProductionCertifications(): CertificationItem[] {
 import { SkillItem } from '../types/content';
 
 export const skillsData: SkillItem[] = ${JSON.stringify(
-  dataset.skills.map(sk => ({
+  cleanSkills.map(sk => ({
     name: sk.name,
     category: mapSkillCategory(sk.category),
     level: 'proficient' as const,
@@ -387,7 +429,7 @@ export function getProductionSkills(): SkillItem[] {
 import { OrganizationItem } from '../types/content';
 
 export const organizationsData: OrganizationItem[] = ${JSON.stringify(
-  dataset.organizations.map(org => ({
+  cleanOrganizations.map(org => ({
     id: org.id,
     name: org.name,
     type: 'company',
@@ -420,7 +462,7 @@ export function getProductionOrganizations(): OrganizationItem[] {
 import { BlogPost } from '../types/content';
 
 export const blogPostsData: BlogPost[] = ${JSON.stringify(
-  dataset.blog_posts.map(bp => ({
+  cleanBlogPosts.map(bp => ({
     id: bp.slug,
     slug: bp.slug,
     title: bp.title,
@@ -429,7 +471,7 @@ export const blogPostsData: BlogPost[] = ${JSON.stringify(
     publishedDate: bp.published_at || '2024-11-15',
     readingTimeMinutes: bp.reading_time_minutes || 6,
     categories: [bp.category || 'Robotics'],
-    tags: bp.tags || [],
+    tags: normalizeStringArray(bp.tags),
     content: bp.content || bp.body,
     source: 'Supabase Canonical single-source-of-truth',
     verificationStatus: bp.verification_status || 'GITHUB_VERIFIED',

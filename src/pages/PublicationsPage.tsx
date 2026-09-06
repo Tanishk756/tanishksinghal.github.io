@@ -4,7 +4,10 @@ import { getProductionPublications } from '../generated/publications';
 import { ArrowUpRight, ShieldCheck, BookOpen } from 'lucide-react';
 
 export const PublicationsPage: React.FC = () => {
-  const publications = getProductionPublications();
+  const productionPublications = getProductionPublications();
+  const publications = Array.isArray(productionPublications)
+    ? productionPublications.filter(Boolean)
+    : [];
 
   return (
     <div className="pt-24 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
@@ -26,69 +29,82 @@ export const PublicationsPage: React.FC = () => {
 
       {/* Bibliography Entries */}
       <div className="space-y-8">
-        {publications.map((pub, idx) => (
-          <div
-            key={pub.id}
-            className="p-8 sm:p-10 rounded-3xl bg-white border border-paper-400 shadow-editorial space-y-6"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-paper-300 gap-2">
-              <span className="text-xs font-mono text-stone-500 uppercase">
-                ENTRY 0{idx + 1} · {pub.venue} · {pub.year}
-              </span>
-              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-ink-700">
-                <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                <span>{pub.verificationStatus}</span>
-              </span>
-            </div>
+        {publications.map((pub, idx) => {
+          const authors = (Array.isArray(pub.authors) ? pub.authors : [])
+            .filter((a): a is string => typeof a === 'string' && a.trim().length > 0);
+          const keywords = (Array.isArray(pub.keywords) ? pub.keywords : [])
+            .filter((k): k is string => typeof k === 'string' && k.trim().length > 0);
 
-            <div className="space-y-3">
-              <Link to={`/publications/${pub.slug}`} className="group">
-                <h2 className="text-2xl font-display font-bold text-ink-900 group-hover:text-ink-700 transition-colors">
-                  {pub.title}
-                </h2>
-              </Link>
-              <div className="text-xs font-mono text-ink-800">
-                Authors: {pub.authors.join(', ')}
-              </div>
-              <p className="text-xs sm:text-sm text-ink-600 font-sans leading-relaxed">
-                {pub.abstract}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
-              <div className="flex flex-wrap gap-1.5">
-                {pub.keywords.map((k, kIdx) => (
-                  <span
-                    key={kIdx}
-                    className="text-[10px] font-mono px-2 py-0.5 rounded bg-paper-100 text-stone-600 border border-paper-300"
-                  >
-                    {k}
+          return (
+            <div
+              key={pub.id || idx}
+              className="p-8 sm:p-10 rounded-3xl bg-white border border-paper-400 shadow-editorial space-y-6"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-paper-300 gap-2">
+                <span className="text-xs font-mono text-stone-500 uppercase">
+                  ENTRY 0{idx + 1} · {pub.venue || 'Publication'} {pub.year ? `· ${pub.year}` : ''}
+                </span>
+                {pub.verificationStatus && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-mono text-ink-700">
+                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                    <span>{pub.verificationStatus}</span>
                   </span>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Link
-                  to={`/publications/${pub.slug}`}
-                  className="text-xs font-sans font-semibold uppercase text-ink-900 hover:text-ink-700"
-                >
-                  View Details →
-                </Link>
-                {pub.sourceUrl && (
-                  <a
-                    href={pub.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-mono text-ink-600 hover:text-ink-900"
-                  >
-                    <span>Google Scholar</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                  </a>
                 )}
               </div>
+
+              <div className="space-y-3">
+                <Link to={`/publications/${pub.slug}`} className="group">
+                  <h2 className="text-2xl font-display font-bold text-ink-900 group-hover:text-ink-700 transition-colors">
+                    {pub.title}
+                  </h2>
+                </Link>
+                {authors.length > 0 && (
+                  <div className="text-xs font-mono text-ink-800">
+                    Authors: {authors.join(', ')}
+                  </div>
+                )}
+                {pub.abstract && (
+                  <p className="text-xs sm:text-sm text-ink-600 font-sans leading-relaxed">
+                    {pub.abstract}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {keywords.map((k, kIdx) => (
+                    <span
+                      key={kIdx}
+                      className="text-[10px] font-mono px-2 py-0.5 rounded bg-paper-100 text-stone-600 border border-paper-300"
+                    >
+                      {k}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Link
+                    to={`/publications/${pub.slug}`}
+                    className="text-xs font-sans font-semibold uppercase text-ink-900 hover:text-ink-700"
+                  >
+                    View Details →
+                  </Link>
+                  {pub.sourceUrl && (
+                    <a
+                      href={pub.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-mono text-ink-600 hover:text-ink-900"
+                    >
+                      <span>Google Scholar</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {publications.length === 0 && (
           <div className="p-16 rounded-3xl bg-white border border-paper-400 shadow-editorial text-center space-y-4 max-w-2xl mx-auto">
@@ -109,3 +125,4 @@ export const PublicationsPage: React.FC = () => {
     </div>
   );
 };
+

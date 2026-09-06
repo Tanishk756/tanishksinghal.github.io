@@ -3,21 +3,7 @@
 
 import { OrganizationItem } from '../types/content';
 
-export const organizationsData: OrganizationItem[] = [
-  {
-    "id": "9053dd36-13e9-414b-82ba-f512a6cada9d",
-    "name": "DronIQ Labs Pvt Ltd",
-    "type": "company",
-    "role": "Robotics and AI Engineer",
-    "relationshipType": "EMPLOYMENT",
-    "startDate": "July 2026",
-    "dateRange": "July 2026 — Present",
-    "source": "Supabase Canonical single-source-of-truth",
-    "verificationStatus": "USER_PROVIDED",
-    "publicEligibility": true,
-    "lastVerified": "2026-09-06T17:49:13.221+00:00"
-  }
-];
+export const organizationsData: OrganizationItem[] = [];
 
 export function getProductionOrganizations(): OrganizationItem[] {
   return organizationsData;

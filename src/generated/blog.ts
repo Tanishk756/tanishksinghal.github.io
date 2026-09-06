@@ -3,31 +3,7 @@
 
 import { BlogPost } from '../types/content';
 
-export const blogPostsData: BlogPost[] = [
-  {
-    "id": "ros2-kinematics-closed-loop",
-    "slug": "ros2-kinematics-closed-loop",
-    "title": "Engineering Closed-Loop Proportional Kinematics in ROS 2",
-    "excerpt": "A deep technical breakdown of managing heading error singularities, velocity clamping, and asynchronous topic synchronization in multi-node robotics packages.",
-    "author": "Tanishk Singhal",
-    "publishedDate": "2024-11-15",
-    "readingTimeMinutes": 6,
-    "categories": [
-      "Engineering"
-    ],
-    "tags": [
-      "ROS 2",
-      "Kinematics",
-      "rclpy",
-      "Python",
-      "Algorithms"
-    ],
-    "content": "\n# Engineering Closed-Loop Proportional Kinematics in ROS 2\n\nWhen developing autonomous tracking or pursuit systems in **Robot Operating System (ROS 2)**, coordinate transformations and heading angle normalization are frequent sources of instability.\n\n## 1. The Discontinuity Problem\n\nA naive implementation of a proportional heading controller computes the error angle as:\n\n```python\nerror_theta = math.atan2(target_y - current_y, target_x - current_x) - current_theta\n```\n\nWhen the error angle crosses the $\\pm \\pi$ boundary (e.g. $+179^\\circ$ transitioning to $-179^\\circ$), the raw numerical difference jumps to $\\approx 358^\\circ$. This triggers sudden, violent rotational spikes in physical actuators or simulated kinematics.\n\n## 2. Robust Quadrant Normalization\n\nTo ensure smooth asymptotic convergence, angle normalization into the $(-\\pi, \\pi]$ interval is mandatory:\n\n```python\ndef normalize_angle(angle: float) -> float:\n    while angle > math.pi:\n        angle -= 2.0 * math.pi\n    while angle < -math.pi:\n        angle += 2.0 * math.pi\n    return angle\n```\n\n## 3. Asynchronous Node Synchronization\n\nIn a decoupled multi-node ROS 2 topology, telemetry subscribers and command publishers must operate without blocking execution threads:\n\n```python\nimport rclpy\nfrom rclpy.node import Node\nfrom geometry_msgs.msg import Twist\nfrom turtlesim.msg import Pose\n\nclass PursuitControllerNode(Node):\n    def __init__(self):\n        super().__init__('pursuit_controller')\n        self.cmd_vel_pub = self.create_publisher(Twist, '/turtle2/cmd_vel', 10)\n        self.pose_sub = self.create_subscription(Pose, '/turtle1/pose', self.on_target_pose, 10)\n        self.current_pose_sub = self.create_subscription(Pose, '/turtle2/pose', self.on_self_pose, 10)\n        \n        # 60Hz control loop timer\n        self.timer = self.create_timer(0.016, self.control_loop)\n```\n\n## 4. Key Takeaways\n1. Always normalize rotational error before scaling by proportional gain ($K_p$).\n2. Implement acceleration clamping to respect the physical torque envelope.\n3. Decouple pose subscriptions from kinematic computation loops.\n    ",
-    "source": "Supabase Canonical single-source-of-truth",
-    "verificationStatus": "GITHUB_VERIFIED",
-    "lastVerified": "2026-09-06T17:49:13.221+00:00"
-  }
-];
+export const blogPostsData: BlogPost[] = [];
 
 export function getProductionBlogPosts(): BlogPost[] {
   return blogPostsData;
