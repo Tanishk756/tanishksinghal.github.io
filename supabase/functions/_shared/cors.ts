@@ -2,6 +2,7 @@
  * Hardened Restrictive CORS Configuration for Supabase Edge Functions.
  * 
  * Explicit Allow-list Only:
+ * - https://tanishk756.github.io
  * - https://admin.tanishksinghal.com
  * - http://localhost:5173
  * - http://localhost:4173
@@ -12,6 +13,7 @@
  */
 
 const ALLOWED_ORIGINS = [
+  'https://tanishk756.github.io',
   'https://admin.tanishksinghal.com',
   'http://localhost:5173',
   'http://localhost:4173',

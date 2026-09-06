@@ -427,7 +427,17 @@ async function runSupabaseSecuritySuite() {
   const corsHeadersTrusted = getCorsHeaders(reqCorsTrusted);
   assert(corsHeadersTrusted['Access-Control-Allow-Origin'] === 'https://admin.tanishksinghal.com', 'Trusted production admin origin granted CORS access');
 
-  // Test 45: Local development origin accepted
+  // Test 45: Public GitHub Pages production origin accepted
+  const reqCorsProd = new Request('http://localhost:54321/functions/v1/contact-submit', {
+    method: 'OPTIONS',
+    headers: { Origin: 'https://tanishk756.github.io' },
+  });
+  const preflightProd = handleCorsPreflight(reqCorsProd);
+  assert(Boolean(preflightProd && preflightProd.status === 204), 'Public GitHub Pages origin granted CORS preflight access');
+  const corsHeadersProd = getCorsHeaders(reqCorsProd);
+  assert(corsHeadersProd['Access-Control-Allow-Origin'] === 'https://tanishk756.github.io', 'Public GitHub Pages origin granted CORS header access');
+
+  // Test 46: Local development origin accepted
   const reqCorsLocal = new Request('http://localhost:54321/functions/v1/admin-content', {
     headers: { Origin: 'http://localhost:5173' },
   });
