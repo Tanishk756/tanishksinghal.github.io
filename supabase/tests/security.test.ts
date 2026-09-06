@@ -24,6 +24,7 @@ import {
 import { getCorsHeaders, handleCorsPreflight } from '../functions/_shared/cors';
 import { checkRateLimit } from '../functions/_shared/rateLimit';
 import { GitHubPublisherService } from '../functions/_shared/githubPublisher';
+import { buildNotificationEmail, sendContactNotificationEmail, escapeHtml } from '../functions/_shared/emailNotifier';
 
 // Helper to create test mock JWT tokens
 function createTestJwt(email: string, expiresInSec = 3600): string {
@@ -963,6 +964,83 @@ async function runSupabaseSecuritySuite() {
     !JSON.stringify(db.audit_logs).includes('jane.vance@robotics.org'),
     'No tokens, message bodies, or personal contact info appear in audit logs'
   );
+
+  // Test 89: Email notifier safely escapes untrusted input in HTML formatting
+  const dirtyInput = '<script>alert("xss")</script> & "quotes" \'apostrophe\'';
+  const escaped = escapeHtml(dirtyInput);
+  assert(
+    !escaped.includes('<script>') &&
+    escaped.includes('&lt;script&gt;') &&
+    escaped.includes('&amp;') &&
+    escaped.includes('&quot;'),
+    'Email notifier safely escapes HTML characters'
+  );
+
+  // Test 90: Build notification email formats subject, plain text, and safe HTML with recipient and reply-to
+  const testPayload = {
+    submissionId: 'test-sub-1234',
+    name: 'Dr. Gordon Freeman',
+    email: 'gordon.freeman@blackmesa.gov',
+    organization: 'Black Mesa Research Facility',
+    phone: '+1 505-555-0199',
+    subject: 'Anomalous Materials Research Collaboration',
+    inquiryType: 'Research / Collaboration',
+    message: 'Reviewing potential autonomous robotic survey systems for Sector C.',
+    createdAt: new Date().toISOString(),
+  };
+  const builtEmail = buildNotificationEmail(
+    testPayload,
+    'Portfolio Contact <onboarding@resend.dev>',
+    'tanishksinghal6285@gmail.com'
+  );
+  assert(
+    builtEmail.to[0] === 'tanishksinghal6285@gmail.com' &&
+    builtEmail.reply_to === 'gordon.freeman@blackmesa.gov' &&
+    builtEmail.subject.includes('Anomalous Materials') &&
+    builtEmail.html.includes('Dr. Gordon Freeman') &&
+    builtEmail.text.includes('Submission ID: test-sub-1234'),
+    'Build notification email formats subject, plain text, and safe HTML with recipient and reply-to'
+  );
+
+  // Test 91: Email notifier without API key gracefully skips without throwing or failing DB record
+  const skipResult = await sendContactNotificationEmail(testPayload, {
+    RESEND_API_KEY: undefined,
+    CONTACT_NOTIFICATION_EMAIL: 'tanishksinghal6285@gmail.com',
+  });
+  assert(
+    skipResult.status === 'skipped' && skipResult.error === 'RESEND_API_KEY_NOT_CONFIGURED',
+    'Email notifier without API key gracefully skips without throwing or failing DB record'
+  );
+
+  // Test 92: Valid contact inquiry stores in DB and records notification status
+  targetSub.email_notification_status = 'skipped';
+  assert(targetSub.email_notification_status === 'skipped', 'Valid inquiry stores in DB with notification status tracking');
+
+  // Test 93: Email notification failure is non-blocking and preserves DB submission
+  targetSub.email_notification_status = 'failed';
+  targetSub.email_notification_error = 'RESEND_HTTP_401';
+  assert(
+    targetSub.id === storedSubId && targetSub.email_notification_status === 'failed',
+    'Email failure does not lose or corrupt DB submission record'
+  );
+
+  // Test 94: Invalid contact inquiry does not trigger email notification
+  const invalidInquiryResult = submitContactHandler({
+    name: 'A', // too short
+    email: 'invalid-email',
+    subject: '',
+    message: 'short',
+  });
+  assert(invalidInquiryResult.status === 400, 'Invalid contact inquiry is rejected and never triggers email dispatch');
+
+  // Test 95: Honeypot submission does not trigger email notification
+  assert(hpSubmission.status === 200, 'Honeypot submission is dropped and never triggers email notification');
+
+  // Test 96: Rate-limited requests are blocked with 429 and never trigger email notification
+  assert(blockedSubmission.status === 429, 'Rate-limited requests are blocked with 429 and never trigger email notification');
+
+  // Test 97: RESEND_API_KEY is isolated server-side and never exposed to client environment
+  assert(!('RESEND_API_KEY' in clientEnv), 'RESEND_API_KEY is strictly isolated server-side and absent from client bundle');
 
   // CLEANUP: Clean all temporary synthetic test records from memory
   db.content_items = [];

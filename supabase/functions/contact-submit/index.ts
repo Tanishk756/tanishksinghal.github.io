@@ -14,6 +14,7 @@
 
 import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 import { checkRateLimit } from '../_shared/rateLimit.ts';
+import { sendContactNotificationEmail } from '../_shared/emailNotifier.ts';
 
 declare const Deno: any;
 
@@ -158,6 +159,52 @@ async function handler(req: Request): Promise<Response> {
 
   const createdData = await dbRes.json();
   const createdId = createdData?.[0]?.id || crypto.randomUUID();
+  const createdAt = createdData?.[0]?.created_at || new Date().toISOString();
+
+  // 6. Asynchronous Notification Dispatch (Non-blocking for visitor response)
+  const resendApiKey = Deno.env.get('RESEND_API_KEY');
+  const notificationEmail = Deno.env.get('CONTACT_NOTIFICATION_EMAIL') || 'tanishksinghal6285@gmail.com';
+  const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL') || 'Portfolio Contact <onboarding@resend.dev>';
+
+  const emailResult = await sendContactNotificationEmail(
+    {
+      submissionId: createdId,
+      name,
+      email,
+      organization: organization || null,
+      phone: phone || null,
+      subject,
+      inquiryType: inquiryType || null,
+      message,
+      createdAt,
+    },
+    {
+      RESEND_API_KEY: resendApiKey,
+      CONTACT_NOTIFICATION_EMAIL: notificationEmail,
+      RESEND_FROM_EMAIL: resendFromEmail,
+    }
+  );
+
+  console.log(`[CONTACT_NOTIFICATION] submissionId=${createdId} status=${emailResult.status} ${emailResult.error ? `error=${emailResult.error}` : ''}`);
+
+  // 7. Update notification delivery status in PostgreSQL
+  try {
+    await fetch(`${supabaseUrl}/rest/v1/contact_submissions?id=eq.${createdId}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': serviceRoleKey,
+        'Authorization': `Bearer ${serviceRoleKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email_notification_status: emailResult.status,
+        email_notification_sent_at: emailResult.status === 'sent' ? new Date().toISOString() : null,
+        email_notification_error: emailResult.error || null,
+      }),
+    });
+  } catch (updateErr: any) {
+    console.error(`[CONTACT_NOTIFICATION_STATUS_UPDATE_ERROR] submissionId=${createdId}`);
+  }
 
   return jsonResponse({
     success: true,

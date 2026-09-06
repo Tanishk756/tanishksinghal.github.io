@@ -67,6 +67,7 @@ graph TD
 
 The `/contact` route supports two independent interaction paths:
 1. **Direct Communication Dispatch**: A structured contact form submitting to the `contact-submit` Supabase Edge Function with anti-spam honeypot, input sanitization, rate-limiting, and PostgreSQL storage protected by RLS.
+   - **Transactional Email Dispatch**: Every legitimate inquiry triggers an asynchronous notification email to `tanishksinghal6285@gmail.com` via Resend (`RESEND_API_KEY` configured in Supabase Edge Secrets). If email dispatch encounters a provider issue, database storage remains the unaffected source of record and user submission succeeds gracefully.
 2. **Direct Google Calendar Booking**: Direct scheduling via Google Calendar appointment schedule (`VITE_GOOGLE_BOOKING_URL`) opening in a secure new tab (`target="_blank" rel="noopener noreferrer"`). Requires no form submission, no OAuth, and no private API credentials.
 
 ---

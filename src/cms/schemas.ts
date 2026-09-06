@@ -265,6 +265,9 @@ export const ContactSubmissionSchema = z.object({
   inquiry_type: z.string().nullable().optional(),
   message: z.string(),
   status: ContactSubmissionStatusSchema,
+  email_notification_status: z.enum(['pending', 'sent', 'failed', 'skipped']).nullable().optional(),
+  email_notification_sent_at: z.string().nullable().optional(),
+  email_notification_error: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 });

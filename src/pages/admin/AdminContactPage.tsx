@@ -102,6 +102,19 @@ export const AdminContactPage: React.FC = () => {
     }
   };
 
+  const getNotificationBadge = (status?: string | null) => {
+    switch (status) {
+      case 'sent':
+        return <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-mono uppercase tracking-wider font-semibold">Notification: Sent</span>;
+      case 'failed':
+        return <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-mono uppercase tracking-wider font-semibold">Notification: Failed</span>;
+      case 'skipped':
+        return <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-mono uppercase tracking-wider">Notification: Skipped</span>;
+      default:
+        return null;
+    }
+  };
+
   return (
     <AdminLayout
       title="Contact Inquiries"
@@ -176,6 +189,7 @@ export const AdminContactPage: React.FC = () => {
                   <div className="space-y-1.5 min-w-0 flex-1">
                     <div className="flex items-center gap-2.5 flex-wrap">
                       {getStatusBadge(sub.status)}
+                      {getNotificationBadge(sub.email_notification_status)}
                       {sub.inquiry_type && (
                         <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
                           {sub.inquiry_type}
@@ -232,8 +246,9 @@ export const AdminContactPage: React.FC = () => {
             {/* Modal Header */}
             <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4">
               <div className="space-y-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {getStatusBadge(selectedSubmission.status)}
+                  {getNotificationBadge(selectedSubmission.email_notification_status)}
                   {selectedSubmission.inquiry_type && (
                     <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
                       {selectedSubmission.inquiry_type}
