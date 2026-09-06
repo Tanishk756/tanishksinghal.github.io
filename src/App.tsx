@@ -7,6 +7,8 @@ import { ScrollToTop } from './components/layout/ScrollToTop';
 import { PageTransition } from './components/ui/PageTransition';
 import { AuthProvider } from './cms/AuthContext';
 
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
+
 // Public Route Pages (Lazy-loaded for bundle splitting)
 import { HomePage } from './pages/HomePage';
 const AboutPage = lazy(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
@@ -53,12 +55,21 @@ const AppContent = () => {
     <div className={`min-h-screen flex flex-col selection:bg-[#141517] selection:text-[#fbfaf7] ${
       isAdmin ? 'bg-slate-100 text-slate-900 font-sans' : 'bg-[#fbfaf7] text-[#141517] font-sans'
     }`}>
+      {/* Skip to Main Content Link for Keyboard Accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-ink-900 focus:text-paper-100 focus:rounded-full focus:shadow-lg focus:outline-none text-xs font-sans font-semibold"
+      >
+        Skip to main content
+      </a>
+
       {/* Public Navigation Header (Omitted for /admin) */}
       {!isAdmin && <Navbar />}
 
       {/* Dynamic Route Content */}
-      <main className="flex-1 relative z-10">
-        <AnimatePresence mode="wait">
+      <main id="main-content" tabIndex={-1} className="flex-1 relative z-10 focus:outline-none">
+        <ErrorBoundary>
+          <AnimatePresence mode="wait">
           <PageTransition key={location.pathname}>
             <Suspense fallback={null}>
               <Routes location={location}>
@@ -106,7 +117,8 @@ const AppContent = () => {
               </Routes>
             </Suspense>
           </PageTransition>
-        </AnimatePresence>
+          </AnimatePresence>
+        </ErrorBoundary>
       </main>
 
       {/* Public Footer (Omitted for /admin) */}
