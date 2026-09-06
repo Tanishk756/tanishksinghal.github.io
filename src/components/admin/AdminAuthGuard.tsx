@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import { useAdminAuth, AUTHORIZED_ADMIN_EMAIL } from '../../cms/AuthContext';
+import { isSupabaseConfigured } from '../../cms/supabaseClient';
 import { Lock, Mail, KeyRound, ShieldAlert, Loader2, CheckCircle2 } from 'lucide-react';
 
 export const AdminAuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -68,13 +69,27 @@ export const AdminAuthGuard: React.FC<{ children: React.ReactNode }> = ({ childr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
+
+    if (!isSupabaseConfigured()) {
+      setAuthError('Supabase frontend configuration is missing');
+      return;
+    }
+
     setSubmitting(true);
+
+    const formatAuthError = (err: any): string => {
+      const msg = err?.message || 'Authentication failed';
+      if (msg.toLowerCase().includes('invalid api key') || msg.toLowerCase().includes('invalid apikey')) {
+        return 'Supabase frontend configuration is missing';
+      }
+      return msg;
+    };
 
     if (useOtp) {
       const { error } = await signInWithOtp(email);
       setSubmitting(false);
       if (error) {
-        setAuthError(error.message);
+        setAuthError(formatAuthError(error));
       } else {
         setOtpSent(true);
       }
@@ -82,7 +97,7 @@ export const AdminAuthGuard: React.FC<{ children: React.ReactNode }> = ({ childr
       const { error } = await signInWithPassword(email, password);
       setSubmitting(false);
       if (error) {
-        setAuthError(error.message);
+        setAuthError(formatAuthError(error));
       }
     }
   };

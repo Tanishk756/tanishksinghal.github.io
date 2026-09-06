@@ -33,6 +33,10 @@ jobs:
       - name: Build static website
         env:
           VITE_GOOGLE_BOOKING_URL: https://calendar.app.google/Ww3ThqpzmeW4FoHUA
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://fpjaijgbcdalrdgwbece.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'sb_publishable_JesQqbucqA9FIKK04_1mrw_nnmkSq-S' }}
+          VITE_CMS_BACKEND: supabase
+          VITE_CMS_API_URL: https://fpjaijgbcdalrdgwbece.supabase.co/functions/v1
         run: npm run build
 
       - name: Upload artifact
