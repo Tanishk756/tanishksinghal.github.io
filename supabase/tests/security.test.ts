@@ -438,7 +438,28 @@ async function runSupabaseSecuritySuite() {
   const corsHeadersProd = getCorsHeaders(reqCorsProd);
   assert(corsHeadersProd['Access-Control-Allow-Origin'] === 'https://tanishk756.github.io', 'Public GitHub Pages origin granted CORS header access');
 
-  // Test 46: Local development origin accepted
+  // Test 46: Custom domain apex production origin accepted
+  const reqCorsCustomApex = new Request('http://localhost:54321/functions/v1/contact-submit', {
+    method: 'OPTIONS',
+    headers: { Origin: 'https://tanishksinghal.in' },
+  });
+  const preflightCustomApex = handleCorsPreflight(reqCorsCustomApex);
+  assert(Boolean(preflightCustomApex && preflightCustomApex.status === 204), 'Custom domain apex origin granted CORS preflight access');
+  const corsHeadersCustomApex = getCorsHeaders(reqCorsCustomApex);
+  assert(corsHeadersCustomApex['Access-Control-Allow-Origin'] === 'https://tanishksinghal.in', 'Custom domain apex origin granted CORS header access');
+  assert(corsHeadersCustomApex['Access-Control-Allow-Credentials'] === 'true', 'Custom domain apex origin granted CORS credentials');
+
+  // Test 47: Custom domain www production origin accepted
+  const reqCorsCustomWww = new Request('http://localhost:54321/functions/v1/contact-submit', {
+    method: 'OPTIONS',
+    headers: { Origin: 'https://www.tanishksinghal.in' },
+  });
+  const preflightCustomWww = handleCorsPreflight(reqCorsCustomWww);
+  assert(Boolean(preflightCustomWww && preflightCustomWww.status === 204), 'Custom domain www origin granted CORS preflight access');
+  const corsHeadersCustomWww = getCorsHeaders(reqCorsCustomWww);
+  assert(corsHeadersCustomWww['Access-Control-Allow-Origin'] === 'https://www.tanishksinghal.in', 'Custom domain www origin granted CORS header access');
+
+  // Test 48: Local development origin accepted
   const reqCorsLocal = new Request('http://localhost:54321/functions/v1/admin-content', {
     headers: { Origin: 'http://localhost:5173' },
   });

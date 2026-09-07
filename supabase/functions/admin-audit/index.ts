@@ -11,7 +11,7 @@ import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 import { authenticateSupabaseRequest } from '../_shared/auth.ts';
 import { checkRateLimit } from '../_shared/rateLimit.ts';
 
-export default async function handler(req: Request): Promise<Response> {
+async function handler(req: Request): Promise<Response> {
   const preflight = handleCorsPreflight(req);
   if (preflight) return preflight;
 
@@ -55,3 +55,7 @@ export default async function handler(req: Request): Promise<Response> {
     data: [],
   });
 }
+
+export default {
+  fetch: handler,
+};

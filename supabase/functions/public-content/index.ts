@@ -41,7 +41,7 @@ const DOMAIN_TABLE_MAP: Record<string, string> = {
   blog_posts: 'blog_posts',
 };
 
-export default async function handler(req: Request): Promise<Response> {
+async function handler(req: Request): Promise<Response> {
   const preflight = handleCorsPreflight(req);
   if (preflight) return preflight;
 
@@ -135,4 +135,8 @@ export default async function handler(req: Request): Promise<Response> {
     return jsonResponse({ success: false, error: err.message || 'Internal error' }, 500);
   }
 }
+
+export default {
+  fetch: handler,
+};
 

@@ -56,7 +56,7 @@ const ALLOWED_RELATIONSHIP_TYPES: Record<string, string[]> = {
   experience: ['organizations', 'projects', 'skills'],
 };
 
-export default async function handler(req: Request): Promise<Response> {
+async function handler(req: Request): Promise<Response> {
   const preflight = handleCorsPreflight(req);
   if (preflight) return preflight;
 
@@ -452,3 +452,7 @@ export default async function handler(req: Request): Promise<Response> {
 
   return jsonResponse({ success: false, error: `Method ${method} not allowed` }, 405);
 }
+
+export default {
+  fetch: handler,
+};

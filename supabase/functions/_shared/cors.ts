@@ -13,6 +13,8 @@
  */
 
 const ALLOWED_ORIGINS = [
+  'https://tanishksinghal.in',
+  'https://www.tanishksinghal.in',
   'https://tanishk756.github.io',
   'https://admin.tanishksinghal.com',
   'http://localhost:5173',
