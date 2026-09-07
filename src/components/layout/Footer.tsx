@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Github, ShieldCheck, ArrowUp } from 'lucide-react';
+import { Github, ArrowUp } from 'lucide-react';
 import { profileData } from '../../generated/profile';
 
 export const Footer: React.FC = () => {
@@ -26,16 +26,6 @@ export const Footer: React.FC = () => {
             <p className="text-ink-600 text-xs leading-relaxed font-sans max-w-sm font-light">
               Autonomous robotics researcher and systems engineer. Specializing in ROS 2 node architecture, algorithmic path planning, closed-loop kinematics, and edge predictive intelligence.
             </p>
-
-            <div className="pt-2 flex flex-wrap items-center gap-3">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-paper-100 border border-paper-400 text-[11px] font-mono text-stone-600">
-                <ShieldCheck className="w-3.5 h-3.5 text-stone-700" />
-                <span>STRICT PROVENANCE AUDITING</span>
-              </div>
-              <span className="text-[11px] font-mono text-stone-500">
-                tanishksinghal.github.io
-              </span>
-            </div>
           </div>
 
           {/* Systems & Engineering */}
@@ -145,7 +135,7 @@ export const Footer: React.FC = () => {
             <span className="opacity-40">/</span>
             <span>ALL RIGHTS RESERVED</span>
             <span className="opacity-40">/</span>
-            <span className="text-ink-700">STATIC REACT ROUTER ARCHITECTURE</span>
+            <span className="text-stone-600">tanishksinghal.in</span>
           </div>
 
           <button
