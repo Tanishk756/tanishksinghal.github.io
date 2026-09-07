@@ -344,9 +344,62 @@ async function handler(req: Request): Promise<Response> {
     });
   }
 
+  function mapToDbColumns(data: Record<string, any>) {
+    const dbItem: Record<string, any> = {};
+    const fieldMap: Record<string, string> = {
+      fullName: 'full_name',
+      displayName: 'display_name',
+      shortBio: 'short_bio',
+      longBio: 'long_bio',
+      avatarUrl: 'avatar_url',
+      profileImageUrl: 'avatar_url',
+      resumeUrl: 'resume_url',
+      githubUrl: 'github_url',
+      linkedinUrl: 'linkedin_url',
+      googleScholarUrl: 'google_scholar_url',
+      researchgateUrl: 'researchgate_url',
+      websiteUrl: 'website_url',
+      availabilityStatus: 'availability_status',
+      publicationStatus: 'publication_status',
+      verificationStatus: 'verification_status',
+      lastVerified: 'last_verified',
+      startDate: 'start_date',
+      endDate: 'end_date',
+      isCurrent: 'is_current',
+      employmentType: 'employment_type',
+      workMode: 'work_mode',
+      displayOrder: 'display_order',
+      coverImage: 'cover_image',
+      demoUrl: 'demo_url',
+      docsUrl: 'docs_url',
+      readingTimeMinutes: 'reading_time_minutes',
+      seoTitle: 'seo_title',
+      seoDescription: 'seo_description',
+      pdfUrl: 'pdf_url',
+      externalUrl: 'doi_url',
+      publicationType: 'publication_type',
+      officialUrl: 'official_url',
+      credentialUrl: 'credential_url',
+      evidenceUrl: 'evidence_url',
+    };
+
+    for (const [key, value] of Object.entries(data)) {
+      if (['contentType', 'currentStatus', 'targetStatus', 'clientTimestamp', 'serverTimestamp'].includes(key)) {
+        continue;
+      }
+      const mappedKey = fieldMap[key] || key;
+      dbItem[mappedKey] = value;
+    }
+    return dbItem;
+  }
+
   if (method === 'POST') {
     const rate = checkRateLimit(req, 'mutation');
     if (!rate.allowed) return jsonResponse({ success: false, error: 'Rate limit exceeded' }, 429);
+
+    if (!rawContentType || !tableName) {
+      return jsonResponse({ success: false, error: 'Valid content type required' }, 400);
+    }
 
     try {
       const body = await req.json();
@@ -369,13 +422,26 @@ async function handler(req: Request): Promise<Response> {
         }, 400);
       }
 
-      const generatedId = `item_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      console.log(`[AUDIT] user=${user.email} action=CONTENT_CREATED type=${rawContentType} id=${generatedId} status=${status} verification=${verificationStatus}`);
+      const dbPayload = mapToDbColumns(body);
+      dbPayload.publication_status = status;
+      dbPayload.verification_status = verificationStatus;
+      dbPayload.updated_at = new Date().toISOString();
+      if (!dbPayload.last_verified) dbPayload.last_verified = new Date().toISOString();
+
+      const insertRes = await querySupabaseRest(tableName, {
+        method: 'POST',
+        body: JSON.stringify(dbPayload),
+      });
+
+      const insertedRow = Array.isArray(insertRes.data) ? insertRes.data[0] : insertRes.data;
+      const returnedId = insertedRow?.id || body.id || `item_${Date.now()}`;
+
+      console.log(`[AUDIT] user=${user.email} action=CONTENT_CREATED type=${rawContentType} id=${returnedId} status=${status} verification=${verificationStatus}`);
       
       return jsonResponse(
         {
           success: true,
-          id: generatedId,
+          id: returnedId,
           isNew: true,
           status,
           verificationStatus,
@@ -392,11 +458,14 @@ async function handler(req: Request): Promise<Response> {
     const rate = checkRateLimit(req, 'mutation');
     if (!rate.allowed) return jsonResponse({ success: false, error: 'Rate limit exceeded' }, 429);
 
+    if (!rawContentType || !tableName) {
+      return jsonResponse({ success: false, error: 'Valid content type required' }, 400);
+    }
+
     try {
       const body = await req.json();
       const currentStatus: LifecycleState = body.currentStatus || 'draft';
       const targetStatus: LifecycleState = body.targetStatus || body.publicationStatus || currentStatus;
-      const expectedUpdatedAt = body.expectedUpdatedAt || body.updatedAt;
 
       // Disallow direct setting of 'published' status via content CRUD
       if (targetStatus === 'published') {
@@ -412,18 +481,35 @@ async function handler(req: Request): Promise<Response> {
         return jsonResponse({ success: false, error: transitionCheck.reason }, 400);
       }
 
-      // Stale-write / Concurrency Check
-      if (body.clientTimestamp && body.serverTimestamp && body.clientTimestamp < body.serverTimestamp) {
-        return jsonResponse({
-          success: false,
-          error: "Conflict: This record was modified in another session. Please refresh to load latest changes.",
-        }, 409);
+      const targetId = idOrSlug || body.id;
+      const dbPayload = mapToDbColumns(body);
+      delete dbPayload.id; // Preserve primary key
+      dbPayload.publication_status = targetStatus;
+      dbPayload.updated_at = new Date().toISOString();
+
+      let patchEndpoint = tableName;
+      if (tableName === 'profiles') {
+        if (targetId && targetId !== 'profile_01' && targetId !== 'profile') {
+          patchEndpoint += `?id=eq.${encodeURIComponent(targetId)}`;
+        } else {
+          const profRes = await querySupabaseRest('profiles?select=id&limit=1');
+          if (profRes.ok && profRes.data && profRes.data[0]) {
+            patchEndpoint += `?id=eq.${encodeURIComponent(profRes.data[0].id)}`;
+          }
+        }
+      } else if (targetId) {
+        patchEndpoint += `?or=(id.eq.${encodeURIComponent(targetId)},slug.eq.${encodeURIComponent(targetId)})`;
       }
 
-      console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=${rawContentType} id=${idOrSlug || body.id} from=${currentStatus} to=${targetStatus}`);
+      await querySupabaseRest(patchEndpoint, {
+        method: 'PATCH',
+        body: JSON.stringify(dbPayload),
+      });
+
+      console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=${rawContentType} id=${targetId} from=${currentStatus} to=${targetStatus}`);
       return jsonResponse({
         success: true,
-        id: idOrSlug || body.id,
+        id: targetId,
         status: targetStatus,
         updatedAt: new Date().toISOString(),
         versionNumber: (body.versionNumber || 1) + 1,
@@ -438,9 +524,14 @@ async function handler(req: Request): Promise<Response> {
     const rate = checkRateLimit(req, 'mutation');
     if (!rate.allowed) return jsonResponse({ success: false, error: 'Rate limit exceeded' }, 429);
 
-    if (!idOrSlug) {
-      return jsonResponse({ success: false, error: 'Content ID required for deletion' }, 400);
+    if (!idOrSlug || !tableName) {
+      return jsonResponse({ success: false, error: 'Content ID and valid table required for deletion' }, 400);
     }
+
+    const deleteEndpoint = `${tableName}?or=(id.eq.${encodeURIComponent(idOrSlug)},slug.eq.${encodeURIComponent(idOrSlug)})`;
+    await querySupabaseRest(deleteEndpoint, {
+      method: 'DELETE',
+    });
 
     console.log(`[AUDIT] user=${user.email} action=CONTENT_DELETED type=${rawContentType} id=${idOrSlug}`);
     return jsonResponse({

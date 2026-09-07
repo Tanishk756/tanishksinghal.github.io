@@ -203,17 +203,17 @@ export const AdminDashboardPage: React.FC = () => {
           {/* Publishing Lock & URL Health Widget */}
           <div className="p-6 rounded-2xl bg-white border border-stone-200 shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-stone-900 uppercase font-mono tracking-wider flex items-center gap-2">
-              <Lock className="w-4 h-4 text-amber-600" />
+              <Lock className="w-4 h-4 text-emerald-600" />
               Publishing Gating Status
             </h2>
 
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
-              <div className="flex items-center gap-2 text-xs font-mono font-semibold text-amber-900">
-                <CheckCircle2 className="w-4 h-4 text-amber-600" />
-                PHASE_9_COMMIT_BLOCKED ACTIVE
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+              <div className="flex items-center gap-2 text-xs font-mono font-semibold text-emerald-900">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                CANONICAL CMS PUBLISHING ACTIVE
               </div>
-              <p className="text-xs text-amber-800 leading-relaxed">
-                Repository mutations remain safety-locked. Dry-run diff compilation is active.
+              <p className="text-xs text-emerald-800 leading-relaxed">
+                Real-time database-native publication to Supabase is active. No GitHub deployment required for content changes.
               </p>
             </div>
 

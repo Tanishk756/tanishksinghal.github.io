@@ -140,14 +140,15 @@ export const AdminBlogEditorPage: React.FC = () => {
         formData.verificationStatus || 'USER_PROVIDED'
       );
       setPublishing(false);
-      if (pubRes.status === 'PHASE_9_COMMIT_BLOCKED' || pubRes.error?.includes('PHASE_9_COMMIT_BLOCKED') || !pubRes.success) {
-        setPublishMessage("Publication is currently locked (Phase 9 Safety Lock). Content remains Approved in Supabase.");
+      if (!pubRes.success) {
+        setPublishMessage(`Unable to publish blog post: ${pubRes.error || 'Please try again.'}`);
       } else {
-        setPublishMessage(`Published successfully to GitHub (Commit: ${pubRes.commitSha || 'verified'})`);
+        setPublishMessage("Blog post published successfully.");
+        setFormData((prev) => ({ ...prev, publicationStatus: 'published' }));
       }
-    } catch {
+    } catch (e: any) {
       setPublishing(false);
-      setPublishMessage("Publication is currently locked. Content remains Approved in Supabase.");
+      setPublishMessage("Unable to publish blog post. Please try again.");
     }
   };
 

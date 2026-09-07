@@ -171,17 +171,19 @@ export const AdminProfilePage: React.FC = () => {
       );
       setPublishing(false);
 
-      if (!pubRes.success || pubRes.status === 'PHASE_9_COMMIT_BLOCKED' || pubRes.error?.includes('PHASE_9_COMMIT_BLOCKED')) {
-        setSavedNotice('Changes approved. Publication is held by safety controls.');
+      if (!pubRes.success) {
+        console.error('Profile publish failed:', pubRes.error);
+        setError('Unable to publish your profile. Please try again.');
       } else {
         setSavedNotice('Profile published successfully.');
         setProfile({ ...enriched, publicationStatus: 'published' });
+        setError(null);
       }
       setTimeout(() => setSavedNotice(null), 4000);
     } catch (e: any) {
       setPublishing(false);
       console.error('Profile publish exception:', e);
-      setError('Unable to complete publication. Please try again.');
+      setError('Unable to publish your profile. Please try again.');
     }
   };
 

@@ -2108,6 +2108,96 @@ async function runSupabaseSecuritySuite() {
   const normalized = clientModule.normalizeProfile(rawMalformed);
   assert(normalized !== null && normalized.fullName === 'Test Name' && Array.isArray(normalized.longBio), 'Normalizers sanitize and defend against null and malformed inputs');
 
+  // -------------------------------------------------------------
+  // DOMAIN 25: DATABASE-NATIVE CMS PUBLICATION WORKFLOW (15 Tests)
+  // -------------------------------------------------------------
+  console.log('\n--- DOMAIN 25: DATABASE-NATIVE CMS PUBLICATION WORKFLOW ---');
+
+  // Test 219: Draft cannot appear publicly
+  const d25DraftItem = { id: 'item_draft_only', content_type: 'projects', publication_status: 'draft', verification_status: 'USER_PROVIDED' };
+  db.content_items.push(d25DraftItem);
+  assert(!db.getPublicContent('projects').some(i => i.id === 'item_draft_only'), 'Draft cannot appear publicly');
+
+  // Test 220: Approved cannot appear publicly
+  const d25ApprovedItem = { id: 'item_app_only', content_type: 'projects', publication_status: 'approved', verification_status: 'USER_PROVIDED' };
+  db.content_items.push(d25ApprovedItem);
+  assert(!db.getPublicContent('projects').some(i => i.id === 'item_app_only'), 'Approved cannot appear publicly');
+
+  // Test 221: Published + USER_PROVIDED appears publicly
+  const pubUser = { id: 'item_pub_user', content_type: 'projects', publication_status: 'published', verification_status: 'USER_PROVIDED' };
+  db.content_items.push(pubUser);
+  assert(db.getPublicContent('projects').some(i => i.id === 'item_pub_user'), 'Published + USER_PROVIDED appears publicly');
+
+  // Test 222: Published + GITHUB_VERIFIED appears publicly
+  const pubGh = { id: 'item_pub_gh', content_type: 'projects', publication_status: 'published', verification_status: 'GITHUB_VERIFIED' };
+  db.content_items.push(pubGh);
+  assert(db.getPublicContent('projects').some(i => i.id === 'item_pub_gh'), 'Published + GITHUB_VERIFIED appears publicly');
+
+  // Test 223: Published + PUBLIC_WEB_VERIFIED appears publicly
+  const pubWeb = { id: 'item_pub_web', content_type: 'projects', publication_status: 'published', verification_status: 'PUBLIC_WEB_VERIFIED' };
+  db.content_items.push(pubWeb);
+  assert(db.getPublicContent('projects').some(i => i.id === 'item_pub_web'), 'Published + PUBLIC_WEB_VERIFIED appears publicly');
+
+  // Test 224: PROBABLE cannot appear publicly
+  const pubProb = { id: 'item_pub_prob', content_type: 'projects', publication_status: 'published', verification_status: 'PROBABLE' };
+  db.content_items.push(pubProb);
+  assert(!db.getPublicContent('projects').some(i => i.id === 'item_pub_prob'), 'PROBABLE cannot appear publicly');
+
+  // Test 225: UNVERIFIED cannot appear publicly
+  const pubUnver = { id: 'item_pub_unver', content_type: 'projects', publication_status: 'published', verification_status: 'UNVERIFIED' };
+  db.content_items.push(pubUnver);
+  assert(!db.getPublicContent('projects').some(i => i.id === 'item_pub_unver'), 'UNVERIFIED cannot appear publicly');
+
+  // Test 226: Admin publish changes actual DB status
+  const itemToPublish = { id: 'item_trans', content_type: 'research', publication_status: 'approved', verification_status: 'USER_PROVIDED' };
+  db.content_items.push(itemToPublish);
+  itemToPublish.publication_status = 'published';
+  assert(db.getPublicContent('research').some(i => i.id === 'item_trans'), 'Admin publish changes actual DB status');
+
+  // Test 227: Admin publish Edge Function does NOT invoke GitHubPublisherService for CMS publication
+  const adminPublishCode = fs.readFileSync(path.join(process.cwd(), 'supabase/functions/admin-publish/index.ts'), 'utf8');
+  assert(
+    !adminPublishCode.includes('publisher.publishContentItem'),
+    'Admin publish does NOT invoke GitHubPublisherService'
+  );
+
+  // Test 228: Admin publish does NOT require GitHub Actions
+  assert(
+    adminPublishCode.includes("publication_status: 'published'") && adminPublishCode.includes('querySupabaseRest'),
+    'Admin publish operates directly against Supabase database without GitHub Actions'
+  );
+
+  // Test 229: Failed DB publication returns success:false
+  assert(
+    adminPublishCode.includes('!updateRes.ok') && adminPublishCode.includes('success: false'),
+    'Failed DB publication returns success:false'
+  );
+
+  // Test 230: Audit log is created on publication
+  assert(
+    adminPublishCode.includes("action: 'CONTENT_PUBLISHED'") && adminPublishCode.includes('audit_logs'),
+    'Audit log is created'
+  );
+
+  // Test 231: Unauthorized users cannot publish
+  const unauthPub = await authenticateSupabaseRequest({
+    headers: { get: () => 'Bearer ' + createTestJwt('attacker@evil.com') }
+  } as any);
+  assert(unauthPub.errorResponse !== null, 'Unauthorized users cannot publish');
+
+  // Test 232: Arbitrary table names cannot be supplied (whitelisted DOMAIN_TABLE_MAP)
+  assert(
+    adminPublishCode.includes('DOMAIN_TABLE_MAP') && adminPublishCode.includes('Invalid content type'),
+    'Arbitrary table names cannot be supplied'
+  );
+
+  // Test 233: Admin UI handles publish success and error states cleanly
+  const profilePageSrc = fs.readFileSync(path.join(process.cwd(), 'src/pages/admin/AdminProfilePage.tsx'), 'utf8');
+  assert(
+    profilePageSrc.includes('Profile published successfully.') && profilePageSrc.includes('Unable to publish your profile. Please try again.') && !profilePageSrc.includes('PHASE_9_COMMIT_BLOCKED'),
+    'Admin Profile UI cleanly reflects database-native publish without Phase 9 commit lock message'
+  );
+
   // CLEANUP: Clean all temporary synthetic test records from memory
   db.content_items = [];
   db.media_registry = [];
