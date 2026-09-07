@@ -155,6 +155,7 @@ export class CMSApiClient {
     };
     return this.invokeFunction<{ id: string; isNew: boolean }>('admin-content', {
       method: 'POST',
+      query: { type: contentType },
       body: { contentType, ...enriched },
     });
   }

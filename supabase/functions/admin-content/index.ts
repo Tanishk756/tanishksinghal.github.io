@@ -82,13 +82,22 @@ async function handler(req: Request): Promise<Response> {
   }
   const user = auth.identity!;
 
-  const supabaseUrl = (typeof Deno !== 'undefined' ? Deno.env.get('SUPABASE_URL') : '') || '';
-  const serviceKey = (typeof Deno !== 'undefined' ? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') : '') || '';
+  let body: any = null;
+  if (method === 'POST' || method === 'PUT') {
+    try {
+      body = await req.json();
+    } catch {
+      body = null;
+    }
+  }
 
   const action = url.searchParams.get('action');
-  const rawContentType = url.searchParams.get('type') || '';
+  const rawContentType = url.searchParams.get('type') || body?.contentType || body?.content_type || '';
   const tableName = DOMAIN_TABLE_MAP[rawContentType.toLowerCase()] || rawContentType;
-  const idOrSlug = url.searchParams.get('id') || '';
+  const idOrSlug = url.searchParams.get('id') || body?.id || '';
+
+  const supabaseUrl = (typeof Deno !== 'undefined' ? Deno.env.get('SUPABASE_URL') : '') || '';
+  const serviceKey = (typeof Deno !== 'undefined' ? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') : '') || '';
 
   // Helper: Supabase REST API Query
   async function querySupabaseRest(endpoint: string, options: RequestInit = {}) {
@@ -451,9 +460,9 @@ async function handler(req: Request): Promise<Response> {
     }
 
     try {
-      const body = await req.json();
-      const status: LifecycleState = body.publicationStatus || body.publication_status || 'draft';
-      const verificationStatus = body.verificationStatus || body.verification_status || 'USER_PROVIDED';
+      const payload = body || {};
+      const status: LifecycleState = payload.publicationStatus || payload.publication_status || 'draft';
+      const verificationStatus = payload.verificationStatus || payload.verification_status || 'USER_PROVIDED';
 
       // Reject forbidden PROBABLE/UNVERIFIED in canonical mutation
       if (!['USER_PROVIDED', 'GITHUB_VERIFIED', 'PUBLIC_WEB_VERIFIED'].includes(verificationStatus)) {
@@ -474,14 +483,23 @@ async function handler(req: Request): Promise<Response> {
       // Specific Profile Singleton Handling
       if (tableName === 'profiles') {
         const existingProf = await querySupabaseRest('profiles?select=id&limit=1');
-        const dbPayload = mapProfileToDb(body, status, verificationStatus);
+        const dbPayload = mapProfileToDb(payload, status, verificationStatus);
         
         if (existingProf.ok && existingProf.data && existingProf.data[0]?.id) {
           const existingId = existingProf.data[0].id;
+          console.log(`[PROFILE DEBUG] request received: method=POST rawContentType=${rawContentType} tableName=${tableName}`);
+          console.log(`[PROFILE DEBUG] authenticated user: ${user.email}`);
+          console.log(`[PROFILE DEBUG] existing profile id found: ${existingId}`);
+          console.log(`[PROFILE DEBUG] mapped DB payload keys:`, Object.keys(dbPayload));
+
           const updateRes = await querySupabaseRest(`profiles?id=eq.${encodeURIComponent(existingId)}`, {
             method: 'PATCH',
             body: JSON.stringify(dbPayload),
           });
+
+          console.log(`[PROFILE DEBUG] PATCH status: ${updateRes.status} ok: ${updateRes.ok}`);
+          console.log(`[PROFILE DEBUG] PATCH response data:`, updateRes.data);
+
           if (!updateRes.ok) {
             console.error(`[DATABASE_ERROR] Profile update failed:`, updateRes.error);
             return jsonResponse({ success: false, error: `Failed to update profile: ${updateRes.error}` }, 500);
@@ -517,7 +535,7 @@ async function handler(req: Request): Promise<Response> {
         }
       }
 
-      const dbPayload = mapToDbColumns(body, tableName);
+      const dbPayload = mapToDbColumns(payload, tableName);
       dbPayload.publication_status = status;
       dbPayload.verification_status = verificationStatus;
       dbPayload.updated_at = new Date().toISOString();
@@ -534,7 +552,7 @@ async function handler(req: Request): Promise<Response> {
       }
 
       const insertedRow = Array.isArray(insertRes.data) ? insertRes.data[0] : insertRes.data;
-      const returnedId = insertedRow?.id || body.id || `item_${Date.now()}`;
+      const returnedId = insertedRow?.id || payload.id || `item_${Date.now()}`;
 
       console.log(`[AUDIT] user=${user.email} action=CONTENT_CREATED type=${rawContentType} id=${returnedId} status=${status} verification=${verificationStatus}`);
       
@@ -563,10 +581,10 @@ async function handler(req: Request): Promise<Response> {
     }
 
     try {
-      const body = await req.json();
-      const currentStatus: LifecycleState = body.currentStatus || 'draft';
-      const targetStatus: LifecycleState = body.targetStatus || body.publicationStatus || currentStatus;
-      const verificationStatus = body.verificationStatus || body.verification_status || 'USER_PROVIDED';
+      const payload = body || {};
+      const currentStatus: LifecycleState = payload.currentStatus || 'draft';
+      const targetStatus: LifecycleState = payload.targetStatus || payload.publicationStatus || currentStatus;
+      const verificationStatus = payload.verificationStatus || payload.verification_status || 'USER_PROVIDED';
 
       // Disallow direct setting of 'published' status via content CRUD
       if (targetStatus === 'published') {
@@ -585,13 +603,21 @@ async function handler(req: Request): Promise<Response> {
       // Specific Profile Singleton Handling
       if (tableName === 'profiles') {
         const existingProf = await querySupabaseRest('profiles?select=id&limit=1');
-        const targetId = existingProf.data?.[0]?.id || idOrSlug || body.id;
-        const dbPayload = mapProfileToDb(body, targetStatus, verificationStatus);
-        
+        const targetId = existingProf.data?.[0]?.id || idOrSlug || payload.id;
+        const dbPayload = mapProfileToDb(payload, targetStatus, verificationStatus);
+
+        console.log(`[PROFILE DEBUG] PUT request received: method=PUT rawContentType=${rawContentType} tableName=${tableName}`);
+        console.log(`[PROFILE DEBUG] authenticated user: ${user.email}`);
+        console.log(`[PROFILE DEBUG] target profile id: ${targetId}`);
+        console.log(`[PROFILE DEBUG] mapped DB payload keys:`, Object.keys(dbPayload));
+
         const updateRes = await querySupabaseRest(`profiles?id=eq.${encodeURIComponent(targetId)}`, {
           method: 'PATCH',
           body: JSON.stringify(dbPayload),
         });
+
+        console.log(`[PROFILE DEBUG] PATCH status: ${updateRes.status} ok: ${updateRes.ok}`);
+        console.log(`[PROFILE DEBUG] PATCH response data:`, updateRes.data);
 
         if (!updateRes.ok) {
           console.error(`[DATABASE_ERROR] Profile update failed:`, updateRes.error);
@@ -604,13 +630,13 @@ async function handler(req: Request): Promise<Response> {
           id: targetId,
           status: targetStatus,
           updatedAt: new Date().toISOString(),
-          versionNumber: (body.versionNumber || 1) + 1,
+          versionNumber: (payload.versionNumber || 1) + 1,
           message: `Profile updated and transitioned to ${targetStatus}`,
         });
       }
 
-      const targetId = idOrSlug || body.id;
-      const dbPayload = mapToDbColumns(body, tableName);
+      const targetId = idOrSlug || payload.id;
+      const dbPayload = mapToDbColumns(payload, tableName);
       delete dbPayload.id; // Preserve primary key
       dbPayload.publication_status = targetStatus;
       dbPayload.updated_at = new Date().toISOString();
@@ -632,7 +658,7 @@ async function handler(req: Request): Promise<Response> {
         id: targetId,
         status: targetStatus,
         updatedAt: new Date().toISOString(),
-        versionNumber: (body.versionNumber || 1) + 1,
+        versionNumber: (payload.versionNumber || 1) + 1,
         message: `Content updated and transitioned to ${targetStatus}`,
       });
     } catch (err: any) {

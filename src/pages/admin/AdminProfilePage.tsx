@@ -157,7 +157,10 @@ export const AdminProfilePage: React.FC = () => {
       const saveRes = await cmsApiClient.saveContentItem('profile', enriched);
       if (!saveRes.success) {
         setPublishing(false);
-        console.error('Profile pre-publish save failed:', saveRes.error);
+        console.error('[PROFILE PUBLISH] saveContentItem failed', {
+          error: saveRes.error,
+          status: saveRes.status,
+        });
         setError('Unable to prepare profile for publication. Please try again.');
         return;
       }
@@ -172,7 +175,10 @@ export const AdminProfilePage: React.FC = () => {
       setPublishing(false);
 
       if (!pubRes.success) {
-        console.error('Profile publish failed:', pubRes.error);
+        console.error('[PROFILE PUBLISH] publishContentItem failed', {
+          error: pubRes.error,
+          status: pubRes.status,
+        });
         setError('Unable to publish your profile. Please try again.');
       } else {
         setSavedNotice('Profile published successfully.');
@@ -182,7 +188,7 @@ export const AdminProfilePage: React.FC = () => {
       setTimeout(() => setSavedNotice(null), 4000);
     } catch (e: any) {
       setPublishing(false);
-      console.error('Profile publish exception:', e);
+      console.error('[PROFILE PUBLISH] publish exception:', e);
       setError('Unable to publish your profile. Please try again.');
     }
   };
