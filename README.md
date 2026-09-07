@@ -2,7 +2,8 @@
 
 [![Deploy to GitHub Pages](https://github.com/Tanishk756/tanishksinghal.github.io/actions/workflows/deploy.yml/badge.svg)](https://github.com/Tanishk756/tanishksinghal.github.io/actions/workflows/deploy.yml)
 
-Live Production URL: **[https://tanishksinghal.github.io/](https://tanishksinghal.github.io/)**
+- **Canonical Production URL**: **[https://tanishksinghal.in/](https://tanishksinghal.in/)**
+- **Legacy GitHub Pages URL**: [https://tanishk756.github.io/tanishksinghal.github.io/](https://tanishk756.github.io/tanishksinghal.github.io/)
 
 Engineering portfolio, autonomous robotics research repository, and content management platform for Tanishk Singhal. Specializing in ROS 2 node architecture, algorithmic path planning, closed-loop kinematics, embedded firmware, and UAV systems.
 
@@ -107,7 +108,7 @@ Only content with verified provenance (`USER_PROVIDED`, `GITHUB_VERIFIED`, `PUBL
 
 | Variable Name | Environment | Description |
 |:---|:---|:---|
-| `VITE_PUBLIC_SITE_URL` | Client / Public | Public canonical site URL (`https://tanishksinghal.github.io`) |
+| `VITE_PUBLIC_SITE_URL` | Client / Public | Public canonical site URL (`https://tanishksinghal.in`) |
 | `VITE_SUPABASE_URL` | Client / Public | Supabase project API gateway |
 | `VITE_SUPABASE_ANON_KEY` | Client / Public | Browser-safe public anon key |
 | `VITE_GOOGLE_BOOKING_URL` | Client / Public | Google Calendar public appointment schedule URL |
@@ -123,7 +124,7 @@ Only content with verified provenance (`USER_PROVIDED`, `GITHUB_VERIFIED`, `PUBL
 # Install dependencies
 npm ci
 
-# Run test suite (90 security & architecture tests)
+# Run test suite (192 security, architecture & resilient data-flow tests)
 npm test
 
 # Start development server
