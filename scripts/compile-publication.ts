@@ -102,12 +102,12 @@ export function compileCanonicalFiles(dataset: PublishedDataset, outputDir: stri
 import { Profile } from '../types/content';
 
 export const profileData: Profile = ${JSON.stringify({
-  fullName: profile.full_name || 'Tanishk Singhal',
-  displayName: profile.display_name || 'Tanishk Singhal',
+  fullName: profile.full_name || profile.fullName || 'Tanishk Singhal',
+  displayName: profile.display_name || profile.displayName || 'Tanishk Singhal',
   headline: profile.headline || 'Robotics Researcher & Systems Engineer',
-  subheadline: 'Building autonomous robotic systems, closed-loop ROS 2 control nodes, embedded firmware, and intelligent machine learning pipelines.',
-  shortBio: profile.short_bio || '',
-  longBio: typeof profile.long_bio === 'string' ? profile.long_bio.split('\n\n') : (profile.long_bio || []),
+  subheadline: profile.subheadline || profile.tagline || 'Building autonomous robotic systems, closed-loop ROS 2 control nodes, embedded firmware, and intelligent machine learning pipelines.',
+  shortBio: profile.short_bio || profile.shortBio || '',
+  longBio: typeof profile.long_bio === 'string' ? profile.long_bio.split('\n\n') : (Array.isArray(profile.long_bio) ? profile.long_bio : (typeof profile.longBio === 'string' ? profile.longBio.split('\n\n') : (profile.longBio || []))),
   location: profile.location || 'India',
   email: profile.email || 'Tanishksinghal6285@gmail.com',
   avatarUrl: profile.profile_image_url || profile.avatar_url || 'https://avatars.githubusercontent.com/u/132895444?v=4',

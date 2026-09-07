@@ -306,6 +306,13 @@ export const AdminProfilePage: React.FC = () => {
             rows={3}
             required
           />
+
+          <TextareaInput
+            label="Detailed Narrative Bio & Philosophy (Separate paragraphs with double enter)"
+            value={Array.isArray(profile.longBio) ? profile.longBio.join('\n\n') : (profile.longBio || '')}
+            onChange={(e) => setProfile({ ...profile, longBio: e.target.value.split('\n\n').map(s => s.trim()).filter(Boolean) })}
+            rows={5}
+          />
         </div>
 
         <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">

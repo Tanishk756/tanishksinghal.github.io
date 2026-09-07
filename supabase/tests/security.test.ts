@@ -14,6 +14,8 @@
  */
 
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   authenticateSupabaseRequest,
   validateLifecycleTransition,
@@ -1947,6 +1949,66 @@ async function runSupabaseSecuritySuite() {
   // Test 199: No duplicate profile records are created in canonical store
   const canonicalProfiles = db.content_items.filter(i => i.content_type === 'profile' && i.id === 'profile_01');
   assert(canonicalProfiles.length === 1, 'No duplicate profile records are created');
+
+  // -------------------------------------------------------------
+  // DOMAIN 23: CMS-DRIVEN PUBLIC ABOUT PAGE INTEGRATION TESTS (7 Tests)
+  // -------------------------------------------------------------
+  console.log('\n--- DOMAIN 23: CMS-DRIVEN PUBLIC ABOUT PAGE INTEGRATION TESTS ---');
+
+  // Test 200: About page consumes generated Profile data
+  const aboutPageImports = fs.readFileSync(path.join(process.cwd(), 'src/pages/AboutPage.tsx'), 'utf8');
+  assert(
+    aboutPageImports.includes("import { profileData } from '../generated/profile'"),
+    'About page consumes generated Profile data'
+  );
+
+  // Test 201: No draft Profile data reaches public pages
+  const draftProfileItem = { id: 'prof-draft-secret', content_type: 'profile', publication_status: 'draft', verification_status: 'USER_PROVIDED' };
+  db.content_items.push(draftProfileItem);
+  const publicProfilesFeed = db.getPublicContent('profile');
+  assert(!publicProfilesFeed.some(p => p.id === 'prof-draft-secret'), 'No draft Profile data reaches public pages');
+
+  // Test 202: Published Profile changes reach About page feed
+  const livePublishedProfile = {
+    id: 'prof-live-updated',
+    content_type: 'profile',
+    headline: 'Updated Systems Engineer',
+    publication_status: 'published',
+    verification_status: 'USER_PROVIDED',
+  };
+  db.content_items.push(livePublishedProfile);
+  assert(
+    db.getPublicContent('profile').some(p => p.id === 'prof-live-updated'),
+    'Published Profile changes reach About page'
+  );
+
+  // Test 203: Hardcoded personal biography cannot override CMS content
+  assert(
+    aboutPageImports.includes('{profileData.subheadline || profileData.headline}') &&
+    aboutPageImports.includes('{profileData.shortBio}'),
+    'Hardcoded personal biography cannot override CMS content'
+  );
+
+  // Test 204: Legacy src/content/profile.ts is not used by AboutPage
+  assert(
+    !aboutPageImports.includes('../content/profile') && !aboutPageImports.includes('/content/profile'),
+    'Legacy src/content/profile.ts is not used by AboutPage'
+  );
+
+  // Test 205: Public page contains no CMS provenance labels
+  assert(
+    !aboutPageImports.includes('USER PROVIDED · VERIFIED') &&
+    !aboutPageImports.includes('VERIFIED LEDGER') &&
+    !aboutPageImports.includes('Anchor identity:'),
+    'Public page contains no CMS provenance labels'
+  );
+
+  // Test 206: Existing Profile publication safety remains intact
+  const publishTransitionSafety = validateLifecycleTransition('draft', 'published');
+  assert(
+    !publishTransitionSafety.valid,
+    'Existing Profile publication safety remains intact (draft cannot jump directly to published without approval)'
+  );
 
   // CLEANUP: Clean all temporary synthetic test records from memory
   db.content_items = [];

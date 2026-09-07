@@ -21,7 +21,7 @@ export const AboutPage: React.FC = () => {
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-display font-extrabold text-ink-900 tracking-tight leading-[1.05]">
-            Engineering across physical & cyber-physical systems.
+            {profileData.subheadline || profileData.headline}
           </h1>
 
           <p className="text-xl font-serifDisplay italic text-ink-700 leading-relaxed">
@@ -63,19 +63,22 @@ export const AboutPage: React.FC = () => {
         </div>
 
         <div className="md:col-span-8 space-y-6 text-sm text-ink-700 font-sans leading-relaxed">
-          {profileData.longBio.map((paragraph, idx) => (
-            <p key={idx}>{paragraph}</p>
-          ))}
+          {Array.isArray(profileData.longBio) && profileData.longBio.length > 0 ? (
+            profileData.longBio.map((paragraph, idx) => (
+              <p key={idx}>{paragraph}</p>
+            ))
+          ) : (
+            <p>{profileData.shortBio}</p>
+          )}
         </div>
       </section>
 
-      {/* 3. Verified Education Chronology */}
+      {/* 3. Education Chronology */}
       <section className="space-y-6 pt-6 border-t border-paper-300">
         <div className="flex items-center justify-between">
           <span className="text-xs font-mono text-stone-500 uppercase tracking-widest block">
             ACADEMIC BACKGROUND
           </span>
-          <span className="text-xs font-mono text-stone-400 uppercase">USER PROVIDED · VERIFIED</span>
         </div>
 
         <div className="space-y-4">
@@ -98,13 +101,12 @@ export const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. Verified Institutional Affiliations */}
+      {/* 4. Institutional Affiliations */}
       <section className="space-y-6 pt-6 border-t border-paper-300">
         <div className="flex items-center justify-between">
           <span className="text-xs font-mono text-stone-500 uppercase tracking-widest block">
             ORGANIZATIONAL AFFILIATIONS
           </span>
-          <span className="text-xs font-mono text-stone-400 uppercase">VERIFIED LEDGER</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -123,11 +125,11 @@ export const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. Verified Channels Strip */}
+      {/* 5. Professional Channels Strip */}
       <section className="p-8 rounded-3xl bg-white border border-paper-400 shadow-editorial flex flex-wrap items-center justify-between gap-6">
         <div>
-          <h3 className="text-lg font-bold text-ink-900">Verified Professional Channels</h3>
-          <p className="text-xs text-stone-500 font-mono">Anchor identity: Tanishk Singhal ({profileData.email})</p>
+          <h3 className="text-lg font-bold text-ink-900">Professional Channels</h3>
+          <p className="text-xs text-stone-500 font-mono">{profileData.fullName} · {profileData.email}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
