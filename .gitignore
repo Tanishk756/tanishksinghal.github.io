@@ -39,6 +39,7 @@ dist-ssr/
 *.local
 .temp/
 supabase/.temp/
+scratch/
 
 
 # Logs
