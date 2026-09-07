@@ -3,7 +3,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { cmsApiClient } from '../../cms/apiClient';
 import { PublicationData } from '../../cms/store';
 import { PublicationSchema } from '../../cms/schemas';
-import { TextInput, TextareaInput, SelectInput, ArrayInput, ProvenanceEditor } from '../../components/admin/FormFields';
+import { TextInput, TextareaInput, SelectInput, ArrayInput } from '../../components/admin/FormFields';
 import { Plus, Edit, Trash2, ShieldCheck, CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 export const AdminPublicationsPage: React.FC = () => {
@@ -90,12 +90,19 @@ export const AdminPublicationsPage: React.FC = () => {
 
   const handleSave = async (item: PublicationData) => {
     try {
-      PublicationSchema.parse(item);
+      const enriched: PublicationData = {
+        ...item,
+        verificationStatus: item.verificationStatus || 'USER_PROVIDED',
+        source: item.source || 'USER_PROVIDED',
+        publicationStatus: item.publicationStatus || 'draft',
+        lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
+      };
+      PublicationSchema.parse(enriched);
       setSaving(true);
       
       const res = isNew
-        ? await cmsApiClient.saveContentItem('publication', item)
-        : await cmsApiClient.updateContentItem('publication', item.id, item);
+        ? await cmsApiClient.saveContentItem('publication', enriched)
+        : await cmsApiClient.updateContentItem('publication', enriched.id, enriched);
 
       if (!res.success) {
         alert(`Supabase Error: ${res.error || 'Failed to save publication record.'}`);
@@ -270,11 +277,6 @@ export const AdminPublicationsPage: React.FC = () => {
                 placeholder="https://..."
               />
             </div>
-
-            <ProvenanceEditor
-              data={editingItem}
-              onChange={(provenance) => setEditingItem({ ...editingItem, ...provenance })}
-            />
 
             <div className="flex justify-end gap-2 pt-2">
               <button

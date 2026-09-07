@@ -124,7 +124,7 @@ Only content with verified provenance (`USER_PROVIDED`, `GITHUB_VERIFIED`, `PUBL
 # Install dependencies
 npm ci
 
-# Run test suite (192 security, architecture & resilient data-flow tests)
+# Run test suite (206 security, architecture & resilient data-flow tests)
 npm test
 
 # Start development server

@@ -3,7 +3,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { cmsApiClient } from '../../cms/apiClient';
 import { CertificationData } from '../../cms/store';
 import { CertificationSchema } from '../../cms/schemas';
-import { TextInput, ArrayInput, ProvenanceEditor } from '../../components/admin/FormFields';
+import { TextInput, ArrayInput } from '../../components/admin/FormFields';
 import { Plus, Edit, Trash2, CheckCircle2, Loader2, AlertCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 
 export const AdminCertificationsPage: React.FC = () => {
@@ -76,11 +76,18 @@ export const AdminCertificationsPage: React.FC = () => {
 
   const handleSave = async (item: CertificationData) => {
     try {
-      CertificationSchema.parse(item);
+      const enriched: CertificationData = {
+        ...item,
+        verificationStatus: item.verificationStatus || 'USER_PROVIDED',
+        source: item.source || 'USER_PROVIDED',
+        publicationStatus: item.publicationStatus || 'draft',
+        lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
+      };
+      CertificationSchema.parse(enriched);
       setSaving(true);
       const res = isNew
-        ? await cmsApiClient.saveContentItem('certification', item)
-        : await cmsApiClient.updateContentItem('certification', item.id, item);
+        ? await cmsApiClient.saveContentItem('certification', enriched)
+        : await cmsApiClient.updateContentItem('certification', enriched.id, enriched);
       setSaving(false);
 
       if (!res.success) {
@@ -199,11 +206,6 @@ export const AdminCertificationsPage: React.FC = () => {
               label="Associated Skills & Disciplines"
               values={editingItem.skills || []}
               onChange={(skills) => setEditingItem({ ...editingItem, skills })}
-            />
-
-            <ProvenanceEditor
-              data={editingItem}
-              onChange={(provenance) => setEditingItem({ ...editingItem, ...provenance })}
             />
 
             <div className="flex justify-end gap-2 pt-2">

@@ -3,7 +3,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { cmsApiClient } from '../../cms/apiClient';
 import { PatentData } from '../../cms/store';
 import { PatentSchema } from '../../cms/schemas';
-import { TextInput, TextareaInput, SelectInput, ArrayInput, ProvenanceEditor } from '../../components/admin/FormFields';
+import { TextInput, TextareaInput, SelectInput, ArrayInput } from '../../components/admin/FormFields';
 import { Plus, Edit, Trash2, ShieldCheck, CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 export const AdminPatentsPage: React.FC = () => {
@@ -78,11 +78,18 @@ export const AdminPatentsPage: React.FC = () => {
 
   const handleSave = async (item: PatentData) => {
     try {
-      PatentSchema.parse(item);
+      const enriched: PatentData = {
+        ...item,
+        verificationStatus: item.verificationStatus || 'USER_PROVIDED',
+        source: item.source || 'USER_PROVIDED',
+        publicationStatus: item.publicationStatus || 'draft',
+        lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
+      };
+      PatentSchema.parse(enriched);
       setSaving(true);
       const res = isNew
-        ? await cmsApiClient.saveContentItem('patent', item)
-        : await cmsApiClient.updateContentItem('patent', item.id, item);
+        ? await cmsApiClient.saveContentItem('patent', enriched)
+        : await cmsApiClient.updateContentItem('patent', enriched.id, enriched);
       setSaving(false);
 
       if (!res.success) {
@@ -227,11 +234,6 @@ export const AdminPatentsPage: React.FC = () => {
               onChange={(e) => setEditingItem({ ...editingItem, abstract: e.target.value })}
               required
               rows={3}
-            />
-
-            <ProvenanceEditor
-              data={editingItem}
-              onChange={(provenance) => setEditingItem({ ...editingItem, ...provenance })}
             />
 
             <div className="flex justify-end gap-2 pt-2">

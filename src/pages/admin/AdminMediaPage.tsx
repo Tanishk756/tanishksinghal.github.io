@@ -3,7 +3,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { MediaData } from '../../cms/store';
 import { cmsApiClient } from '../../cms/apiClient';
 import { MediaSchema } from '../../cms/schemas';
-import { TextInput, TextareaInput, SelectInput, ProvenanceEditor } from '../../components/admin/FormFields';
+import { TextInput, TextareaInput, SelectInput } from '../../components/admin/FormFields';
 import { Plus, Trash2, Image, FileText, Cpu, Video, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 
 export const AdminMediaPage: React.FC = () => {
@@ -60,9 +60,15 @@ export const AdminMediaPage: React.FC = () => {
 
   const handleSave = async (item: MediaData) => {
     try {
-      MediaSchema.parse(item);
+      const enriched: MediaData = {
+        ...item,
+        verificationStatus: item.verificationStatus || 'USER_PROVIDED',
+        source: item.source || 'USER_PROVIDED',
+        lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
+      };
+      MediaSchema.parse(enriched);
       setSaving(true);
-      const res = await cmsApiClient.saveContentItem('media', item);
+      const res = await cmsApiClient.saveContentItem('media', enriched);
       if (!res.success) {
         alert(`Failed to save media asset to Supabase: ${res.error || 'Unknown error'}`);
         setSaving(false);
@@ -209,11 +215,6 @@ export const AdminMediaPage: React.FC = () => {
               value={editingItem.caption || ''}
               onChange={(e) => setEditingItem({ ...editingItem, caption: e.target.value })}
               rows={2}
-            />
-
-            <ProvenanceEditor
-              data={editingItem}
-              onChange={(provenance) => setEditingItem({ ...editingItem, ...provenance })}
             />
 
             <div className="flex justify-end gap-2 pt-2">

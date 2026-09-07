@@ -145,17 +145,30 @@ export class CMSApiClient {
   }
 
   async saveContentItem(contentType: string, data: any) {
+    const enriched = {
+      ...data,
+      verificationStatus: data.verificationStatus || 'USER_PROVIDED',
+      source: data.source || 'USER_PROVIDED',
+      publicationStatus: data.publicationStatus || 'draft',
+      lastVerified: data.lastVerified || new Date().toISOString().split('T')[0],
+    };
     return this.invokeFunction<{ id: string; isNew: boolean }>('admin-content', {
       method: 'POST',
-      body: { contentType, ...data },
+      body: { contentType, ...enriched },
     });
   }
 
   async updateContentItem(contentType: string, id: string, data: any) {
+    const enriched = {
+      ...data,
+      verificationStatus: data.verificationStatus || 'USER_PROVIDED',
+      source: data.source || 'USER_PROVIDED',
+      lastVerified: data.lastVerified || new Date().toISOString().split('T')[0],
+    };
     return this.invokeFunction<{ id: string }>('admin-content', {
       method: 'PUT',
       query: { type: contentType, id },
-      body: { contentType, id, ...data },
+      body: { contentType, id, ...enriched },
     });
   }
 

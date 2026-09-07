@@ -3,7 +3,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { OrganizationData } from '../../cms/store';
 import { cmsApiClient } from '../../cms/apiClient';
 import { OrganizationSchema } from '../../cms/schemas';
-import { TextInput, TextareaInput, ProvenanceEditor } from '../../components/admin/FormFields';
+import { TextInput, TextareaInput } from '../../components/admin/FormFields';
 import { Plus, Trash2, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 
 export const AdminOrganizationsPage: React.FC = () => {
@@ -58,9 +58,16 @@ export const AdminOrganizationsPage: React.FC = () => {
 
   const handleSave = async (item: OrganizationData) => {
     try {
-      OrganizationSchema.parse(item);
+      const enriched: OrganizationData = {
+        ...item,
+        verificationStatus: item.verificationStatus || 'USER_PROVIDED',
+        source: item.source || 'USER_PROVIDED',
+        publicationStatus: item.publicationStatus || 'draft',
+        lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
+      };
+      OrganizationSchema.parse(enriched);
       setSaving(true);
-      const res = await cmsApiClient.saveContentItem('organization', item);
+      const res = await cmsApiClient.saveContentItem('organization', enriched);
       if (!res.success) {
         alert(`Failed to save organization to Supabase: ${res.error || 'Unknown error'}`);
         setSaving(false);
@@ -167,11 +174,6 @@ export const AdminOrganizationsPage: React.FC = () => {
               onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
               required
               rows={2}
-            />
-
-            <ProvenanceEditor
-              data={editingItem}
-              onChange={(provenance) => setEditingItem({ ...editingItem, ...provenance })}
             />
 
             <div className="flex justify-end gap-2 pt-2">

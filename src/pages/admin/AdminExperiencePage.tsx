@@ -3,7 +3,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { cmsApiClient } from '../../cms/apiClient';
 import { ExperienceData } from '../../cms/store';
 import { ExperienceSchema } from '../../cms/schemas';
-import { TextInput, TextareaInput, ArrayInput, ProvenanceEditor } from '../../components/admin/FormFields';
+import { TextInput, TextareaInput, ArrayInput } from '../../components/admin/FormFields';
 import { Plus, Edit, Trash2, ShieldCheck, CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 export const AdminExperiencePage: React.FC = () => {
@@ -85,12 +85,19 @@ export const AdminExperiencePage: React.FC = () => {
 
   const handleSave = async (item: ExperienceData) => {
     try {
-      ExperienceSchema.parse(item);
+      const enriched: ExperienceData = {
+        ...item,
+        verificationStatus: item.verificationStatus || 'USER_PROVIDED',
+        source: item.source || 'USER_PROVIDED',
+        publicationStatus: item.publicationStatus || 'draft',
+        lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
+      };
+      ExperienceSchema.parse(enriched);
       setSaving(true);
       
       const res = isNew
-        ? await cmsApiClient.saveContentItem('experience', item)
-        : await cmsApiClient.updateContentItem('experience', item.id, item);
+        ? await cmsApiClient.saveContentItem('experience', enriched)
+        : await cmsApiClient.updateContentItem('experience', enriched.id, enriched);
 
       if (!res.success) {
         alert(`Supabase Error: ${res.error || 'Failed to save experience record.'}`);
@@ -236,11 +243,6 @@ export const AdminExperiencePage: React.FC = () => {
               values={editingItem.technologies}
               onChange={(technologies) => setEditingItem({ ...editingItem, technologies })}
               placeholder="e.g. ROS 2, C++, Python, Gazebo, STM32"
-            />
-
-            <ProvenanceEditor
-              data={editingItem}
-              onChange={(provenance) => setEditingItem({ ...editingItem, ...provenance })}
             />
 
             <div className="flex justify-end gap-2 pt-2">

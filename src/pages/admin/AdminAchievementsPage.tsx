@@ -3,7 +3,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { cmsApiClient } from '../../cms/apiClient';
 import { AchievementData } from '../../cms/store';
 import { AchievementSchema } from '../../cms/schemas';
-import { TextInput, TextareaInput, SelectInput, ProvenanceEditor } from '../../components/admin/FormFields';
+import { TextInput, TextareaInput, SelectInput } from '../../components/admin/FormFields';
 import { Plus, Edit, Trash2, CheckCircle2, Loader2, AlertCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 
 export const AdminAchievementsPage: React.FC = () => {
@@ -76,11 +76,18 @@ export const AdminAchievementsPage: React.FC = () => {
 
   const handleSave = async (item: AchievementData) => {
     try {
-      AchievementSchema.parse(item);
+      const enriched: AchievementData = {
+        ...item,
+        verificationStatus: item.verificationStatus || 'USER_PROVIDED',
+        source: item.source || 'USER_PROVIDED',
+        publicationStatus: item.publicationStatus || 'draft',
+        lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
+      };
+      AchievementSchema.parse(enriched);
       setSaving(true);
       const res = isNew
-        ? await cmsApiClient.saveContentItem('achievement', item)
-        : await cmsApiClient.updateContentItem('achievement', item.id, item);
+        ? await cmsApiClient.saveContentItem('achievement', enriched)
+        : await cmsApiClient.updateContentItem('achievement', enriched.id, enriched);
       setSaving(false);
 
       if (!res.success) {
@@ -209,11 +216,6 @@ export const AdminAchievementsPage: React.FC = () => {
               value={editingItem.evidenceUrl || ''}
               onChange={(e) => setEditingItem({ ...editingItem, evidenceUrl: e.target.value })}
               placeholder="https://..."
-            />
-
-            <ProvenanceEditor
-              data={editingItem}
-              onChange={(provenance) => setEditingItem({ ...editingItem, ...provenance })}
             />
 
             <div className="flex justify-end gap-2 pt-2">

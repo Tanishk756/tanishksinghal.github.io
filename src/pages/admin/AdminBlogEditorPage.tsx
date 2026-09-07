@@ -4,7 +4,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BlogData } from '../../cms/store';
 import { cmsApiClient } from '../../cms/apiClient';
 import { BlogSchema } from '../../cms/schemas';
-import { TextInput, TextareaInput, ArrayInput, ProvenanceEditor } from '../../components/admin/FormFields';
+import { TextInput, TextareaInput, ArrayInput } from '../../components/admin/FormFields';
 import { Save, ArrowLeft, Eye, CheckCircle2, AlertCircle, Info, Loader2 } from 'lucide-react';
 import { ZodIssue } from 'zod';
 
@@ -24,13 +24,13 @@ const defaultNewPost: BlogData = {
   sourceUrl: '',
   verificationStatus: 'USER_PROVIDED',
   lastVerified: new Date().toISOString().split('T')[0],
-  notes: 'Created via Blog CMS Editor',
+  notes: '',
 };
 
 export const AdminBlogEditorPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id: postId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isNew = !id || id === 'new';
+  const isNew = !postId || postId === 'new';
 
   const [formData, setFormData] = useState<BlogData>(defaultNewPost);
   const [loading, setLoading] = useState(!isNew);
@@ -42,16 +42,24 @@ export const AdminBlogEditorPage: React.FC = () => {
   const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
-    if (!isNew && id) {
-      loadPost(id);
+    if (!isNew && postId) {
+      loadPost(postId);
     }
-  }, [id, isNew]);
+  }, [postId, isNew]);
 
-  const loadPost = async (postId: string) => {
+  const loadPost = async (id: string) => {
     setLoading(true);
-    const res = await cmsApiClient.getContentItem<BlogData>('blog', postId);
+    const res = await cmsApiClient.getContentItem<BlogData>('blog', id);
     if (res.success && res.data) {
-      setFormData(res.data);
+      const p = res.data;
+      setFormData({
+        ...p,
+        tags: Array.isArray(p.tags) ? p.tags : [],
+        verificationStatus: p.verificationStatus || 'USER_PROVIDED',
+        source: p.source || 'USER_PROVIDED',
+        publicationStatus: p.publicationStatus || 'draft',
+        lastVerified: p.lastVerified || new Date().toISOString().split('T')[0],
+      });
     } else {
       alert(`Blog post not found: ${postId}`);
       navigate('/admin/blog');
@@ -60,9 +68,12 @@ export const AdminBlogEditorPage: React.FC = () => {
   };
 
   const handleSave = async (publishState?: 'draft' | 'approved' | 'archived') => {
-    const dataToSave = {
+    const dataToSave: BlogData = {
       ...formData,
       publicationStatus: publishState || (formData.publicationStatus === 'published' ? 'approved' : formData.publicationStatus) || 'draft',
+      verificationStatus: formData.verificationStatus || 'USER_PROVIDED',
+      source: formData.source || 'USER_PROVIDED',
+      lastVerified: formData.lastVerified || new Date().toISOString().split('T')[0],
     };
 
     const result = BlogSchema.safeParse(dataToSave);
@@ -327,11 +338,6 @@ export const AdminBlogEditorPage: React.FC = () => {
             </div>
           )}
         </div>
-
-        <ProvenanceEditor
-          data={formData}
-          onChange={(provenance) => setFormData((prev) => ({ ...prev, ...provenance }))}
-        />
       </form>
       )}
     </AdminLayout>

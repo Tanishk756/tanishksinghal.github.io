@@ -9,7 +9,6 @@ import {
   TextareaInput,
   SelectInput,
   ArrayInput,
-  ProvenanceEditor,
 } from '../../components/admin/FormFields';
 import { Save, ArrowLeft, Eye, CheckCircle2, AlertCircle, Info, Loader2 } from 'lucide-react';
 
@@ -105,9 +104,12 @@ export const AdminProjectEditorPage: React.FC = () => {
   };
 
   const handleSave = async (publishState?: 'draft' | 'approved' | 'archived') => {
-    const dataToSave = {
+    const dataToSave: ProjectData = {
       ...formData,
       publicationStatus: publishState || (formData.publicationStatus === 'published' ? 'approved' : formData.publicationStatus) || 'draft',
+      verificationStatus: formData.verificationStatus || 'USER_PROVIDED',
+      source: formData.source || 'USER_PROVIDED',
+      lastVerified: formData.lastVerified || new Date().toISOString().split('T')[0],
     };
 
     const result = ProjectSchema.safeParse(dataToSave);
@@ -494,12 +496,6 @@ export const AdminProjectEditorPage: React.FC = () => {
             />
           </div>
         </div>
-
-        {/* 4. Data Provenance & Verification */}
-        <ProvenanceEditor
-          data={formData}
-          onChange={(provenance) => setFormData((prev) => ({ ...prev, ...provenance }))}
-        />
       </form>
       )}
     </AdminLayout>

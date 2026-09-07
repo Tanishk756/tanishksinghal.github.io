@@ -3,7 +3,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { cmsApiClient } from '../../cms/apiClient';
 import { ResearchData } from '../../cms/store';
 import { ResearchSchema } from '../../cms/schemas';
-import { TextInput, TextareaInput, SelectInput, ProvenanceEditor } from '../../components/admin/FormFields';
+import { TextInput, TextareaInput, SelectInput } from '../../components/admin/FormFields';
 import { Plus, Edit, Trash2, ShieldCheck, CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 export const AdminResearchPage: React.FC = () => {
@@ -78,12 +78,19 @@ export const AdminResearchPage: React.FC = () => {
 
   const handleSave = async (item: ResearchData) => {
     try {
-      ResearchSchema.parse(item);
+      const enriched: ResearchData = {
+        ...item,
+        verificationStatus: item.verificationStatus || 'USER_PROVIDED',
+        source: item.source || 'USER_PROVIDED',
+        publicationStatus: item.publicationStatus || 'draft',
+        lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
+      };
+      ResearchSchema.parse(enriched);
       setSaving(true);
       
       const res = isNew
-        ? await cmsApiClient.saveContentItem('research', item)
-        : await cmsApiClient.updateContentItem('research', item.id, item);
+        ? await cmsApiClient.saveContentItem('research', enriched)
+        : await cmsApiClient.updateContentItem('research', enriched.id, enriched);
 
       if (!res.success) {
         alert(`Supabase Error: ${res.error || 'Failed to save research record.'}`);
@@ -228,11 +235,6 @@ export const AdminResearchPage: React.FC = () => {
                 rows={3}
               />
             </div>
-
-            <ProvenanceEditor
-              data={editingItem}
-              onChange={(provenance) => setEditingItem({ ...editingItem, ...provenance })}
-            />
 
             <div className="flex justify-end gap-2 pt-2">
               <button

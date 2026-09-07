@@ -3,7 +3,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { cmsApiClient } from '../../cms/apiClient';
 import { ProfileData } from '../../cms/store';
 import { ProfileSchema } from '../../cms/schemas';
-import { TextInput, TextareaInput, ProvenanceEditor } from '../../components/admin/FormFields';
+import { TextInput, TextareaInput } from '../../components/admin/FormFields';
 import { Save, CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { ZodIssue } from 'zod';
 
@@ -24,9 +24,11 @@ export const AdminProfilePage: React.FC = () => {
     setError(null);
     try {
       const res = await cmsApiClient.getContentList<ProfileData>('profile');
-      if (res.success && Array.isArray(res.data) && res.data[0]) {
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
         const p: any = res.data[0];
-        setProfile({
+        const normalized: ProfileData = {
+          ...p,
+          id: String(p.id || 'profile_01'),
           fullName: String(p.fullName || p.full_name || 'Tanishk Singhal'),
           displayName: String(p.displayName || p.display_name || 'Tanishk Singhal'),
           headline: String(p.headline || ''),
@@ -50,7 +52,8 @@ export const AdminProfilePage: React.FC = () => {
           verificationStatus: (p.verificationStatus || p.verification_status || 'USER_PROVIDED') as any,
           lastVerified: String(p.lastVerified || p.last_verified || new Date().toISOString().split('T')[0]),
           notes: String(p.notes || p.verification_notes || ''),
-        });
+        };
+        setProfile(normalized);
       } else {
         // Safe default structure
         setProfile({
@@ -84,7 +87,13 @@ export const AdminProfilePage: React.FC = () => {
 
   const handleSave = async () => {
     if (!profile) return;
-    const result = ProfileSchema.safeParse(profile);
+    const enriched: ProfileData = {
+      ...profile,
+      verificationStatus: profile.verificationStatus || 'USER_PROVIDED',
+      source: profile.source || 'USER_PROVIDED',
+      lastVerified: profile.lastVerified || new Date().toISOString().split('T')[0],
+    };
+    const result = ProfileSchema.safeParse(enriched);
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
       result.error.issues.forEach((err: ZodIssue) => {
@@ -96,7 +105,7 @@ export const AdminProfilePage: React.FC = () => {
 
     setErrors({});
     setSaving(true);
-    const res = await cmsApiClient.saveContentItem('profile', profile);
+    const res = await cmsApiClient.saveContentItem('profile', enriched);
     setSaving(false);
 
     if (!res.success) {
@@ -247,12 +256,7 @@ export const AdminProfilePage: React.FC = () => {
             />
           </div>
         </div>
-
-            <ProvenanceEditor
-              data={profile}
-              onChange={(provenance) => setProfile((prev) => (prev ? { ...prev, ...provenance } : null))}
-            />
-          </>
+      </>
         )}
       </div>
     </AdminLayout>
