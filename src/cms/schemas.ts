@@ -20,6 +20,7 @@ export const PublicationStatusSchema = z.enum(['draft', 'review', 'approved', 'p
 
 // 3. Profile Schema
 export const ProfileSchema = ProvenanceSchema.extend({
+  id: z.string().optional(),
   fullName: z.string().min(1, 'Full name is required'),
   displayName: z.string().min(1, 'Display name is required'),
   headline: z.string().min(1, 'Headline is required'),
@@ -30,6 +31,7 @@ export const ProfileSchema = ProvenanceSchema.extend({
   email: z.string().email('Must be a valid email address'),
   websiteUrl: z.string().url().optional().or(z.literal('')),
   profileImage: z.string().optional(),
+  publicationStatus: PublicationStatusSchema.optional().default('published'),
   socials: z.object({
     github: z.string().url('Must be a valid URL'),
     linkedin: z.string().url().optional().or(z.literal('')),

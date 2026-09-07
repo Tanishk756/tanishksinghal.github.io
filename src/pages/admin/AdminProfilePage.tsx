@@ -12,8 +12,9 @@ export const AdminProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [savedNotice, setSavedNotice] = useState(false);
+  const [savedNotice, setSavedNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -50,6 +51,7 @@ export const AdminProfilePage: React.FC = () => {
           source: String(p.source || 'USER_PROVIDED'),
           sourceUrl: String(p.sourceUrl || p.source_url || p.evidence_url || ''),
           verificationStatus: (p.verificationStatus || p.verification_status || 'USER_PROVIDED') as any,
+          publicationStatus: (p.publicationStatus || p.publication_status || 'published') as any,
           lastVerified: String(p.lastVerified || p.last_verified || new Date().toISOString().split('T')[0]),
           notes: String(p.notes || p.verification_notes || ''),
         };
@@ -74,21 +76,24 @@ export const AdminProfilePage: React.FC = () => {
           source: 'USER_PROVIDED',
           sourceUrl: '',
           verificationStatus: 'USER_PROVIDED',
+          publicationStatus: 'draft',
           lastVerified: new Date().toISOString().split('T')[0],
           notes: 'Owner verified profile anchor',
         });
       }
     } catch (e: any) {
-      setError(e.message || 'Failed to load profile from Supabase.');
+      console.error('Error loading profile:', e);
+      setError('Unable to load profile data. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSave = async () => {
+  const handleSaveDraft = async () => {
     if (!profile) return;
     const enriched: ProfileData = {
       ...profile,
+      publicationStatus: 'draft',
       verificationStatus: profile.verificationStatus || 'USER_PROVIDED',
       source: profile.source || 'USER_PROVIDED',
       lastVerified: profile.lastVerified || new Date().toISOString().split('T')[0],
@@ -105,16 +110,79 @@ export const AdminProfilePage: React.FC = () => {
 
     setErrors({});
     setSaving(true);
-    const res = await cmsApiClient.saveContentItem('profile', enriched);
-    setSaving(false);
+    try {
+      const res = await cmsApiClient.saveContentItem('profile', enriched);
+      setSaving(false);
 
-    if (!res.success) {
-      alert(`Failed to save profile to Supabase: ${res.error || 'Unknown error'}`);
+      if (!res.success) {
+        console.error('Profile draft save failed:', res.error);
+        setError('Unable to save your draft. Please try again.');
+        return;
+      }
+
+      setProfile(enriched);
+      setError(null);
+      setSavedNotice('Draft saved successfully.');
+      setTimeout(() => setSavedNotice(null), 3500);
+    } catch (e: any) {
+      setSaving(false);
+      console.error('Profile draft save exception:', e);
+      setError('Unable to save your draft. Please try again.');
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!profile) return;
+    const enriched: ProfileData = {
+      ...profile,
+      publicationStatus: 'approved',
+      verificationStatus: profile.verificationStatus || 'USER_PROVIDED',
+      source: profile.source || 'USER_PROVIDED',
+      lastVerified: profile.lastVerified || new Date().toISOString().split('T')[0],
+    };
+    const result = ProfileSchema.safeParse(enriched);
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.issues.forEach((err: ZodIssue) => {
+        if (err.path[0]) fieldErrors[String(err.path[0])] = err.message;
+      });
+      setErrors(fieldErrors);
       return;
     }
 
-    setSavedNotice(true);
-    setTimeout(() => setSavedNotice(false), 3000);
+    setErrors({});
+    setPublishing(true);
+    try {
+      // 1. Save as approved in draft store
+      const saveRes = await cmsApiClient.saveContentItem('profile', enriched);
+      if (!saveRes.success) {
+        setPublishing(false);
+        console.error('Profile pre-publish save failed:', saveRes.error);
+        setError('Unable to prepare profile for publication. Please try again.');
+        return;
+      }
+
+      // 2. Trigger publication workflow
+      const pubRes = await cmsApiClient.publishContentItem(
+        'profile',
+        profile.id || 'profile_01',
+        'approved',
+        enriched.verificationStatus
+      );
+      setPublishing(false);
+
+      if (!pubRes.success || pubRes.status === 'PHASE_9_COMMIT_BLOCKED' || pubRes.error?.includes('PHASE_9_COMMIT_BLOCKED')) {
+        setSavedNotice('Changes approved. Publication is held by safety controls.');
+      } else {
+        setSavedNotice('Profile published successfully.');
+        setProfile({ ...enriched, publicationStatus: 'published' });
+      }
+      setTimeout(() => setSavedNotice(null), 4000);
+    } catch (e: any) {
+      setPublishing(false);
+      console.error('Profile publish exception:', e);
+      setError('Unable to complete publication. Please try again.');
+    }
   };
 
   return (
@@ -122,21 +190,34 @@ export const AdminProfilePage: React.FC = () => {
       title="Profile & Identity Anchors"
       subtitle="Edit primary identity, biographical narratives, and verified professional channels"
       action={
-        <button
-          onClick={handleSave}
-          disabled={loading || saving || !profile}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
-        >
-          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-          <span>{saving ? 'Saving...' : 'Save Profile'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSaveDraft}
+            disabled={loading || saving || publishing || !profile}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50 transition-colors"
+            title="Save changes as a draft without publishing"
+          >
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            <span>{saving ? 'Saving...' : 'SAVE DRAFT'}</span>
+          </button>
+
+          <button
+            onClick={handlePublish}
+            disabled={loading || saving || publishing || !profile}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50 transition-colors"
+            title="Approve and trigger publication workflow"
+          >
+            {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+            <span>{publishing ? 'Publishing...' : 'PUBLISH'}</span>
+          </button>
+        </div>
       }
     >
       <div className="space-y-6">
         {loading && (
           <div className="p-12 text-center rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
             <Loader2 className="w-6 h-6 animate-spin text-amber-500 mx-auto" />
-            <p className="text-xs font-mono text-slate-500">Loading canonical profile from Supabase...</p>
+            <p className="text-xs font-mono text-slate-500">Loading profile data...</p>
           </div>
         )}
 
@@ -147,7 +228,7 @@ export const AdminProfilePage: React.FC = () => {
               <span>{error}</span>
             </div>
             <button
-              onClick={loadProfile}
+              onClick={() => { setError(null); loadProfile(); }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-[11px] font-semibold transition-colors"
             >
               <RefreshCw className="w-3 h-3" />
@@ -157,9 +238,9 @@ export const AdminProfilePage: React.FC = () => {
         )}
 
         {savedNotice && (
-          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-mono flex items-center gap-2 font-semibold">
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-mono flex items-center gap-2 font-semibold animate-in fade-in">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>Profile updated successfully!</span>
+            <span>{savedNotice}</span>
           </div>
         )}
 

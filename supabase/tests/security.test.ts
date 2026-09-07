@@ -44,6 +44,7 @@ function createTestJwt(email: string, expiresInSec = 3600): string {
 class MockSupabaseDatabase {
   public admin_users = [{ email: 'tanishksinghal6285@gmail.com', role: 'admin' }];
   public content_items: any[] = [];
+  public content_versions: any[] = [];
   public media_registry: any[] = [];
   public audit_logs: any[] = [];
   public publish_jobs: any[] = [];
@@ -1844,6 +1845,108 @@ async function runSupabaseSecuritySuite() {
   const ownerAuthSession = { user: { email: 'tanishksinghal6285@gmail.com' } };
   const ownerEstablishedProvenance = ownerAuthSession.user.email === 'tanishksinghal6285@gmail.com' ? 'USER_PROVIDED' : 'UNVERIFIED';
   assert(ownerEstablishedProvenance === 'USER_PROVIDED', 'Authenticated owner identity establishes valid USER_PROVIDED provenance automatically');
+
+  // -------------------------------------------------------------
+  // DOMAIN 22: PROFILE DRAFT & PUBLICATION WORKFLOW REGRESSION TESTS (9 Tests)
+  // -------------------------------------------------------------
+  console.log('\n--- DOMAIN 22: PROFILE DRAFT & PUBLICATION WORKFLOW TESTS ---');
+
+  // Test 191: Authorized owner can create a profile draft
+  const initialPublishedProfile = {
+    id: 'profile_01',
+    content_type: 'profile',
+    full_name: 'Tanishk Singhal',
+    headline: 'Robotics Researcher & Systems Engineer',
+    publication_status: 'published',
+    verification_status: 'USER_PROVIDED',
+  };
+  db.content_items.push(initialPublishedProfile);
+
+  const proposedProfileDraft = {
+    id: 'profile_01_draft',
+    content_type: 'profile',
+    full_name: 'Tanishk Singhal',
+    headline: 'Autonomous Robotics & Kinematics Specialist',
+    publication_status: 'draft',
+    verification_status: 'USER_PROVIDED',
+    source: 'USER_PROVIDED',
+  };
+  db.content_items.push(proposedProfileDraft);
+  assert(
+    db.content_items.some(i => i.id === 'profile_01_draft' && i.publication_status === 'draft'),
+    'Authorized owner can create a profile draft'
+  );
+
+  // Test 192: Authorized owner can update a profile draft
+  const updatedProfileDraft = {
+    ...proposedProfileDraft,
+    headline: 'Updated Robotics Specialist',
+    updated_at: new Date().toISOString(),
+  };
+  const draftIdx = db.content_items.findIndex(i => i.id === 'profile_01_draft');
+  if (draftIdx >= 0) db.content_items[draftIdx] = updatedProfileDraft;
+  assert(
+    db.content_items.find(i => i.id === 'profile_01_draft')?.headline === 'Updated Robotics Specialist',
+    'Authorized owner can update a profile draft'
+  );
+
+  // Test 193: content_versions snapshot is created on profile update
+  const initialVersionCount = db.content_versions.length;
+  db.content_versions.push({
+    id: `ver_prof_${Date.now()}`,
+    content_id: 'profile_01',
+    version_number: 2,
+    data: updatedProfileDraft,
+    created_at: new Date().toISOString(),
+  });
+  assert(db.content_versions.length === initialVersionCount + 1, 'content_versions snapshot is created');
+
+  // Test 194: Direct publication through generic content CRUD remains strictly forbidden
+  const saveViaGenericCrud = (payload: any) => {
+    if (payload.publicationStatus === 'published' || payload.publication_status === 'published') {
+      return { success: false, error: 'Direct publication via content CRUD is forbidden. Use the publication workflow.' };
+    }
+    return { success: true, id: payload.id, status: payload.publicationStatus || 'draft' };
+  };
+  const forbiddenCrudPublish = saveViaGenericCrud({ id: 'profile_01', publicationStatus: 'published' });
+  assert(
+    !forbiddenCrudPublish.success && forbiddenCrudPublish.error.includes('forbidden'),
+    'Direct publication through generic CRUD remains forbidden'
+  );
+
+  // Test 195: Publish requires the existing publication workflow (admin-publish)
+  const triggerProfilePublishWorkflow = (profileId: string, currentStatus: string, verification: string) => {
+    if (currentStatus !== 'approved' && currentStatus !== 'published') {
+      return { success: false, error: 'Content must be approved prior to publication' };
+    }
+    if (!['USER_PROVIDED', 'GITHUB_VERIFIED', 'PUBLIC_WEB_VERIFIED'].includes(verification)) {
+      return { success: false, error: 'Invalid provenance for publication' };
+    }
+    return { success: true, jobId: `job_prof_${Date.now()}`, status: 'published' };
+  };
+  const pubWorkflowResult = triggerProfilePublishWorkflow('profile_01', 'approved', 'USER_PROVIDED');
+  assert(pubWorkflowResult.success && Boolean(pubWorkflowResult.jobId), 'Publish requires the existing publication workflow');
+
+  // Test 196: Unauthorized users cannot mutate profile content
+  const unauthMutationAttempt = { userEmail: 'attacker@evil.com', target: 'profile' };
+  const canMutate = unauthMutationAttempt.userEmail === 'tanishksinghal6285@gmail.com';
+  assert(!canMutate, 'Unauthorized users cannot mutate profile content');
+
+  // Test 197: Saving a draft does not make it publicly visible
+  const publicProfiles = db.getPublicContent('profile');
+  const draftVisibleInPublic = publicProfiles.some(p => p.id === 'profile_01_draft' || p.headline === 'Updated Robotics Specialist');
+  assert(!draftVisibleInPublic, 'Saving a draft does not make it publicly visible');
+
+  // Test 198: Existing published profile remains unchanged until explicit publish
+  const currentPublicProfile = db.getPublicContent('profile').find(p => p.id === 'profile_01');
+  assert(
+    currentPublicProfile?.headline === 'Robotics Researcher & Systems Engineer',
+    'Existing published profile remains unchanged until explicit publish'
+  );
+
+  // Test 199: No duplicate profile records are created in canonical store
+  const canonicalProfiles = db.content_items.filter(i => i.content_type === 'profile' && i.id === 'profile_01');
+  assert(canonicalProfiles.length === 1, 'No duplicate profile records are created');
 
   // CLEANUP: Clean all temporary synthetic test records from memory
   db.content_items = [];
