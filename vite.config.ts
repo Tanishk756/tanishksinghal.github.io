@@ -13,6 +13,13 @@ export default defineConfig(({ command }) => {
       outDir: 'dist',
       sourcemap: false,
       chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'three-vendor': ['three'],
+          },
+        },
+      },
     },
   };
 });
