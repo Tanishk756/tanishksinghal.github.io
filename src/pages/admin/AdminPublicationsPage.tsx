@@ -14,6 +14,7 @@ export const AdminPublicationsPage: React.FC = () => {
   const [isNew, setIsNew] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export const AdminPublicationsPage: React.FC = () => {
     try {
       const res = await cmsApiClient.getContentList<PublicationData>('publication');
       if (res.success && Array.isArray(res.data)) {
+        const validPubStatuses = ['published', 'accepted', 'under-review', 'in-preparation'];
         const normalized = res.data.filter(Boolean).map((p: any) => ({
           ...p,
           id: String(p.id || `pub-${Date.now()}`),
@@ -35,7 +37,7 @@ export const AdminPublicationsPage: React.FC = () => {
           year: Number(p.year) || new Date().getFullYear(),
           venue: String(p.venue || ''),
           publicationType: (p.publicationType || p.publication_type || 'journal') as any,
-          status: (p.status || 'published') as any,
+          status: (validPubStatuses.includes(p.status) ? p.status : 'published') as any,
           publicationStatus: (p.publicationStatus || p.publication_status || 'draft') as any,
           abstract: String(p.abstract || ''),
           keywords: Array.isArray(p.keywords) ? p.keywords.filter(Boolean).map(String) : [],
@@ -88,16 +90,28 @@ export const AdminPublicationsPage: React.FC = () => {
     });
   };
 
-  const handleSave = async (item: PublicationData) => {
+  const handleSave = async (item: PublicationData, targetPublicationStatus: 'draft' | 'approved' = 'draft') => {
     try {
+      const validStatuses = ['published', 'accepted', 'under-review', 'in-preparation'];
+      const rawStatus = item.status as string;
+      const cleanStatus = validStatuses.includes(rawStatus) ? rawStatus : 'under-review';
+
       const enriched: PublicationData = {
         ...item,
+        status: cleanStatus as any,
         verificationStatus: item.verificationStatus || 'USER_PROVIDED',
         source: item.source || 'USER_PROVIDED',
-        publicationStatus: item.publicationStatus || 'draft',
+        publicationStatus: targetPublicationStatus,
         lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
       };
-      PublicationSchema.parse(enriched);
+      
+      const parseResult = PublicationSchema.safeParse(enriched);
+      if (!parseResult.success) {
+        console.error('[SAVE_VALIDATION_ERROR]', parseResult.error.issues);
+        setError(`Validation Error: ${parseResult.error.issues[0]?.message || 'Invalid publication data'}`);
+        return;
+      }
+
       setSaving(true);
       
       const res = isNew
@@ -105,7 +119,7 @@ export const AdminPublicationsPage: React.FC = () => {
         : await cmsApiClient.updateContentItem('publication', enriched.id, enriched);
 
       if (!res.success) {
-        alert(`Supabase Error: ${res.error || 'Failed to save publication record.'}`);
+        setError(`Supabase Error: ${res.error || 'Failed to save publication record.'}`);
         setSaving(false);
         return;
       }
@@ -116,9 +130,72 @@ export const AdminPublicationsPage: React.FC = () => {
       setNotice('Publication record saved successfully in Supabase.');
       setTimeout(() => setNotice(null), 3000);
     } catch (e: any) {
-      alert(`Validation Error: ${e.errors?.[0]?.message || e.message}`);
+      console.error('[SAVE_EXCEPTION]', e);
+      setError(`Validation Error: ${e.errors?.[0]?.message || e.message}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePublish = async (item: PublicationData) => {
+    try {
+      setPublishingId(item.id);
+      const validStatuses = ['published', 'accepted', 'under-review', 'in-preparation'];
+      const rawStatus = item.status as string;
+      const cleanStatus = validStatuses.includes(rawStatus) ? rawStatus : 'published';
+
+      const enriched: PublicationData = {
+        ...item,
+        status: cleanStatus as any,
+        verificationStatus: item.verificationStatus || 'USER_PROVIDED',
+        source: item.source || 'USER_PROVIDED',
+        publicationStatus: 'approved',
+        lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
+      };
+
+      const parseResult = PublicationSchema.safeParse(enriched);
+      if (!parseResult.success) {
+        console.error('[PUBLISH_VALIDATION_ERROR]', JSON.stringify(parseResult.error.issues));
+        setError(`Validation Error: ${parseResult.error.issues[0]?.message || 'Invalid publication data'}`);
+        setPublishingId(null);
+        return;
+      }
+
+      // 1. Save pre-publish state as approved
+      const saveRes = isNew
+        ? await cmsApiClient.saveContentItem('publication', enriched)
+        : await cmsApiClient.updateContentItem('publication', item.id, enriched);
+
+      if (!saveRes.success) {
+        setError(`Supabase Error: ${saveRes.error || 'Failed to prepare publication for release.'}`);
+        setPublishingId(null);
+        return;
+      }
+
+      const targetId = saveRes.id || item.id;
+
+      // 2. Trigger publication workflow
+      const pubRes = await cmsApiClient.publishContentItem(
+        'publication',
+        targetId,
+        'approved',
+        enriched.verificationStatus
+      );
+
+      if (!pubRes.success) {
+        setError(`Supabase Publish Error: ${pubRes.error || 'Failed to publish publication.'}`);
+      } else {
+        await loadPublications();
+        setEditingItem(null);
+        setIsNew(false);
+        setNotice(`Publication "${item.title}" successfully published.`);
+        setTimeout(() => setNotice(null), 3500);
+      }
+    } catch (e: any) {
+      console.error('[PUBLISH_EXCEPTION]', e);
+      setError(`Publish Error: ${e.errors?.[0]?.message || e.message}`);
+    } finally {
+      setPublishingId(null);
     }
   };
 
@@ -288,12 +365,21 @@ export const AdminPublicationsPage: React.FC = () => {
               </button>
               <button
                 type="button"
-                disabled={saving}
-                onClick={() => handleSave(editingItem)}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
+                disabled={saving || publishingId !== null}
+                onClick={() => handleSave(editingItem, 'draft')}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                <span>{saving ? 'Saving to Supabase...' : 'Save Publication'}</span>
+                <span>{saving ? 'Saving Draft...' : 'Save Draft'}</span>
+              </button>
+              <button
+                type="button"
+                disabled={saving || publishingId !== null}
+                onClick={() => handlePublish(editingItem)}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
+              >
+                {publishingId === editingItem.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                <span>{publishingId === editingItem.id ? 'Publishing...' : 'Publish'}</span>
               </button>
             </div>
           </div>
@@ -343,6 +429,17 @@ export const AdminPublicationsPage: React.FC = () => {
                       <ShieldCheck className="w-3 h-3" />
                       <span>{pub.verificationStatus}</span>
                     </span>
+                    {pub.publicationStatus !== 'published' && (
+                      <button
+                        onClick={() => handlePublish(pub)}
+                        disabled={publishingId === pub.id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-mono font-medium disabled:opacity-50 transition-colors"
+                        title="Publish to public website"
+                      >
+                        {publishingId === pub.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                        <span>Publish</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         setIsNew(false);

@@ -309,7 +309,9 @@ async function handler(req: Request): Promise<Response> {
             sourceUrl: item.evidence_url || item.source_url || item.sourceUrl || '',
             source: item.source || 'USER_PROVIDED',
             domain: item.area || item.domain || '',
-            status: item.status_label || item.status || 'active',
+            status: tableName === 'publications'
+              ? (['published', 'accepted', 'under-review', 'in-preparation'].includes(item.status) ? item.status : (item.publication_status === 'published' ? 'published' : 'under-review'))
+              : (item.status_label || item.status || 'active'),
             problem: item.research_question || item.problem || '',
             tagline: item.subtitle || item.tagline || '',
             startDate: item.start_date || item.startDate || item.timeframe || '',
@@ -384,6 +386,65 @@ async function handler(req: Request): Promise<Response> {
     };
   }
 
+  function mapPublicationToDb(data: Record<string, any>, status: LifecycleState, verificationStatus: string) {
+    const nowIso = new Date().toISOString();
+    const pubTypeMap: Record<string, string> = {
+      journal: 'journal',
+      'journal article': 'journal',
+      conference: 'conference',
+      'conference paper': 'conference',
+      'peer-reviewed conference': 'conference',
+      preprint: 'preprint',
+      'preprint / arxiv': 'preprint',
+      workshop: 'workshop',
+      'workshop paper': 'workshop',
+      'book-chapter': 'book_chapter',
+      'book_chapter': 'book_chapter',
+      'book chapter': 'book_chapter',
+      'technical report': 'technical_report',
+      technical_report: 'technical_report',
+      patent: 'patent',
+    };
+    const rawType = String(data.publicationType || data.publication_type || 'conference').toLowerCase().trim();
+    const mappedType = pubTypeMap[rawType] || 'conference';
+
+    const cleanSlug = data.slug && String(data.slug).trim().length >= 2
+      ? String(data.slug).trim()
+      : (data.title ? String(data.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `pub-${Date.now()}`);
+
+    const cleanAuthors = Array.isArray(data.authors)
+      ? data.authors.map(String).filter(Boolean)
+      : (typeof data.authors === 'string' ? data.authors.split(',').map((s: string) => s.trim()).filter(Boolean) : ['Tanishk Singhal']);
+
+    const cleanKeywords = Array.isArray(data.keywords)
+      ? data.keywords.map(String).filter(Boolean)
+      : (typeof data.keywords === 'string' ? data.keywords.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
+
+    const doiUrl = data.doiUrl || data.doi_url || data.externalUrl || data.external_url ||
+      (data.doi ? (String(data.doi).startsWith('http') ? String(data.doi) : `https://doi.org/${String(data.doi).trim()}`) : null);
+
+    return {
+      slug: cleanSlug,
+      title: String(data.title || 'Untitled Publication'),
+      authors: cleanAuthors.length > 0 ? cleanAuthors : ['Tanishk Singhal'],
+      venue: String(data.venue || 'Academic Research Publication'),
+      publication_type: mappedType,
+      year: Number(data.year) || new Date().getFullYear(),
+      doi: data.doi ? String(data.doi).trim() : null,
+      abstract: String(data.abstract || 'Publication abstract details.'),
+      keywords: cleanKeywords,
+      doi_url: doiUrl,
+      scholar_url: data.scholarUrl || data.scholar_url || null,
+      researchgate_url: data.researchGateUrl || data.researchgate_url || null,
+      citation_count: data.citationCount != null ? Number(data.citationCount) : (data.citation_count != null ? Number(data.citation_count) : null),
+      display_order: Number(data.displayOrder || data.display_order) || 0,
+      publication_status: status,
+      verification_status: verificationStatus,
+      last_verified: data.lastVerified || data.last_verified || nowIso,
+      updated_at: nowIso,
+    };
+  }
+
   function mapToDbColumns(data: Record<string, any>, targetTable: string) {
     const dbItem: Record<string, any> = {};
     const fieldMap: Record<string, string> = {
@@ -425,8 +486,6 @@ async function handler(req: Request): Promise<Response> {
       publicationType: 'publication_type',
       officialUrl: 'official_url',
       credentialUrl: 'credential_url',
-      evidenceUrl: 'evidence_url',
-      sourceUrl: 'evidence_url',
       hardwareSpecs: 'hardware_specs',
       softwareStack: 'software_stack',
       firmwareSpecs: 'firmware_specs',
@@ -442,7 +501,13 @@ async function handler(req: Request): Promise<Response> {
     };
 
     for (const [key, value] of Object.entries(data)) {
-      if (['contentType', 'currentStatus', 'targetStatus', 'clientTimestamp', 'serverTimestamp', 'notes', 'source', 'socials'].includes(key)) {
+      if (['contentType', 'currentStatus', 'targetStatus', 'clientTimestamp', 'serverTimestamp', 'notes', 'source', 'socials', 'publisher', 'pdfUrl'].includes(key)) {
+        continue;
+      }
+      if (['evidenceUrl', 'sourceUrl', 'evidence_url', 'source_url'].includes(key)) {
+        if (['experience', 'research_programs', 'achievements', 'certifications'].includes(targetTable)) {
+          dbItem['evidence_url'] = value;
+        }
         continue;
       }
       const mappedKey = fieldMap[key] || key;
@@ -531,6 +596,58 @@ async function handler(req: Request): Promise<Response> {
             status,
             verificationStatus,
             message: 'Profile created successfully',
+          }, 201);
+        }
+      }
+
+      // Specific Publications Handling
+      if (tableName === 'publications') {
+        const dbPayload = mapPublicationToDb(payload, status, verificationStatus);
+        console.log(`[PUBLICATION DEBUG] POST request received for publication: slug=${dbPayload.slug}`);
+
+        const existingPub = dbPayload.slug ? await querySupabaseRest(`publications?slug=eq.${encodeURIComponent(dbPayload.slug)}&limit=1`) : null;
+        if (existingPub && existingPub.ok && existingPub.data && existingPub.data[0]?.id) {
+          const existingId = existingPub.data[0].id;
+          console.log(`[PUBLICATION DEBUG] Existing publication found by slug (${existingId}), performing PATCH update`);
+          const updateRes = await querySupabaseRest(`publications?id=eq.${encodeURIComponent(existingId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!updateRes.ok) {
+            console.error(`[DATABASE_ERROR] Publication update failed:`, updateRes.error);
+            return jsonResponse({ success: false, error: `Failed to update publication: ${updateRes.error}` }, 500);
+          }
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=publication id=${existingId} status=${status}`);
+          return jsonResponse({
+            success: true,
+            id: existingId,
+            isNew: false,
+            status,
+            verificationStatus,
+            message: 'Publication record updated successfully in draft state',
+          }, 200);
+        } else {
+          if (payload.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.id)) {
+            (dbPayload as any).id = payload.id;
+          }
+          const insertRes = await querySupabaseRest('publications', {
+            method: 'POST',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!insertRes.ok) {
+            console.error(`[DATABASE_ERROR] Publication insert failed:`, insertRes.error);
+            return jsonResponse({ success: false, error: `Database insert failed: ${insertRes.error}` }, 500);
+          }
+          const insertedRow = Array.isArray(insertRes.data) ? insertRes.data[0] : insertRes.data;
+          const insertedId = insertedRow?.id || payload.id;
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_CREATED type=publication id=${insertedId} status=${status}`);
+          return jsonResponse({
+            success: true,
+            id: insertedId,
+            isNew: true,
+            status,
+            verificationStatus,
+            message: 'Publication record created successfully in draft state',
           }, 201);
         }
       }
@@ -632,6 +749,35 @@ async function handler(req: Request): Promise<Response> {
           updatedAt: new Date().toISOString(),
           versionNumber: (payload.versionNumber || 1) + 1,
           message: `Profile updated and transitioned to ${targetStatus}`,
+        });
+      }
+
+      // Specific Publications Handling
+      if (tableName === 'publications') {
+        const targetId = idOrSlug || payload.id;
+        const dbPayload = mapPublicationToDb(payload, targetStatus, verificationStatus);
+        console.log(`[PUBLICATION DEBUG] PUT request received for publication: targetId=${targetId}`);
+
+        const lookupRes = await querySupabaseRest(`publications?or=(id.eq.${encodeURIComponent(targetId)},slug.eq.${encodeURIComponent(targetId)})&limit=1`);
+        const recordId = lookupRes.ok && lookupRes.data && lookupRes.data[0]?.id ? lookupRes.data[0].id : targetId;
+
+        const updateRes = await querySupabaseRest(`publications?id=eq.${encodeURIComponent(recordId)}`, {
+          method: 'PATCH',
+          body: JSON.stringify(dbPayload),
+        });
+        if (!updateRes.ok) {
+          console.error(`[DATABASE_ERROR] Publication update failed:`, updateRes.error);
+          return jsonResponse({ success: false, error: `Failed to update publication in database: ${updateRes.error}` }, 500);
+        }
+        console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=publication id=${recordId} from=${currentStatus} to=${targetStatus}`);
+        return jsonResponse({
+          success: true,
+          id: recordId,
+          status: targetStatus,
+          verificationStatus,
+          updatedAt: new Date().toISOString(),
+          versionNumber: (payload.versionNumber || 1) + 1,
+          message: `Publication record updated and transitioned to ${targetStatus}`,
         });
       }
 

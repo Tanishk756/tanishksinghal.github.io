@@ -41,10 +41,10 @@ export function validateLifecycleTransition(
   }
 
   const validTransitions: Record<LifecycleState, LifecycleState[]> = {
-    draft: ['review', 'archived'],
-    review: ['approved', 'draft', 'archived'],
-    approved: ['published', 'draft', 'review', 'archived'],
-    published: ['archived'],
+    draft: ['review', 'approved', 'draft', 'archived'],
+    review: ['approved', 'draft', 'review', 'archived'],
+    approved: ['published', 'draft', 'review', 'approved', 'archived'],
+    published: ['archived', 'draft', 'approved'],
     archived: ['draft'],
   };
 
