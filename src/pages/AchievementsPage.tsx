@@ -1,9 +1,27 @@
 import React from 'react';
-import { getProductionAchievements } from '../generated/achievements';
-import { ShieldCheck, Info } from 'lucide-react';
+import { usePublicContent } from '../context/PublicContentContext';
+import { Info, LoaderCircle } from 'lucide-react';
 
 export const AchievementsPage: React.FC = () => {
-  const achievements = getProductionAchievements();
+  const { achievements, isLoading, error } = usePublicContent();
+
+  if (isLoading && achievements.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <LoaderCircle className="w-8 h-8 animate-spin text-stone-400" />
+        <p className="text-xs font-mono text-stone-500 uppercase tracking-widest">Loading Achievements...</p>
+      </div>
+    );
+  }
+
+  if (error && achievements.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+        <h1 className="text-4xl font-display font-bold text-ink-900">Honors & Achievements</h1>
+        <p className="text-sm font-sans text-stone-600">Content temporarily unavailable.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-24 pb-24 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
@@ -27,16 +45,12 @@ export const AchievementsPage: React.FC = () => {
       <div className="space-y-8">
         {achievements.map((ach, idx) => (
           <div
-            key={ach.id}
+            key={ach.id || idx}
             className="p-8 sm:p-10 rounded-3xl bg-white border border-paper-400 shadow-editorial space-y-3"
           >
             <div className="flex items-center justify-between pb-3 border-b border-paper-300">
               <span className="text-xs font-mono text-stone-500 uppercase">
                 HONOR 0{idx + 1} · {ach.category.toUpperCase()} · {ach.date}
-              </span>
-              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-ink-800">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>{ach.verificationStatus}</span>
               </span>
             </div>
 
@@ -51,13 +65,10 @@ export const AchievementsPage: React.FC = () => {
             <div className="w-10 h-10 rounded-full bg-paper-200 border border-paper-300 flex items-center justify-center mx-auto text-ink-800">
               <Info className="w-5 h-5" />
             </div>
-            <h3 className="text-xl font-display font-bold text-ink-900">Honors Registry Under Audit</h3>
+            <h3 className="text-xl font-display font-bold text-ink-900">Honors Registry</h3>
             <p className="text-xs sm:text-sm text-ink-600 font-sans leading-relaxed">
-              Competition rankings, hackathon awards, and scholarly recognitions are currently undergoing verification before publication.
+              Competition rankings, hackathon awards, and scholarly recognitions will be published here upon release.
             </p>
-            <div className="text-[11px] font-mono text-stone-400 uppercase pt-2">
-              PROVENANCE GATING ACTIVE // ZERO UNVERIFIED ENTRIES
-            </div>
           </div>
         )}
       </div>

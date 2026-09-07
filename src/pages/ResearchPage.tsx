@@ -1,12 +1,27 @@
 import React from 'react';
-import { getProductionResearch } from '../generated/research';
-import { ArrowUpRight, ShieldCheck, Microscope } from 'lucide-react';
+import { usePublicContent } from '../context/PublicContentContext';
+import { Microscope, LoaderCircle } from 'lucide-react';
 
 export const ResearchPage: React.FC = () => {
-  const productionResearch = getProductionResearch();
-  const researchItems = Array.isArray(productionResearch)
-    ? productionResearch.filter(Boolean)
-    : [];
+  const { research: researchItems, isLoading, error } = usePublicContent();
+
+  if (isLoading && researchItems.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <LoaderCircle className="w-8 h-8 animate-spin text-stone-400" />
+        <p className="text-xs font-mono text-stone-500 uppercase tracking-widest">Loading Research...</p>
+      </div>
+    );
+  }
+
+  if (error && researchItems.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+        <h1 className="text-4xl font-display font-bold text-ink-900">Research Programs & Inquiries</h1>
+        <p className="text-sm font-sans text-stone-600">Content temporarily unavailable.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-24 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
@@ -51,70 +66,41 @@ export const ResearchPage: React.FC = () => {
                     </span>
                   </div>
                 </div>
-
-                {prog.verificationStatus && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-paper-100 border border-paper-300 text-[11px] font-mono text-ink-800">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>{prog.verificationStatus}</span>
-                  </span>
-                )}
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-8 space-y-6">
-                  {prog.summary && (
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-mono uppercase text-stone-500 font-bold block">
-                        EXECUTIVE SUMMARY
-                      </span>
-                      <p className="text-sm text-ink-700 font-sans leading-relaxed">
-                        {prog.summary}
-                      </p>
-                    </div>
-                  )}
+                  <div>
+                    <span className="text-xs font-mono uppercase text-stone-500 tracking-wider block mb-2">
+                      EXECUTIVE ABSTRACT
+                    </span>
+                    <p className="text-sm text-ink-700 font-sans leading-relaxed">
+                      {prog.summary}
+                    </p>
+                  </div>
 
-                  {prog.methodology && (
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-mono uppercase text-stone-500 font-bold block">
-                        METHODOLOGY & EXPERIMENTAL FORMULATION
-                      </span>
-                      <p className="text-xs sm:text-sm text-ink-600 font-sans leading-relaxed">
-                        {prog.methodology}
-                      </p>
-                    </div>
-                  )}
+                  <div>
+                    <span className="text-xs font-mono uppercase text-stone-500 tracking-wider block mb-2">
+                      METHODOLOGICAL TOPOLOGY
+                    </span>
+                    <p className="text-xs sm:text-sm text-ink-600 font-sans leading-relaxed">
+                      {prog.methodology}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="lg:col-span-4 p-6 rounded-2xl bg-paper-100 border border-paper-300 space-y-4">
-                  <span className="text-[10px] font-mono uppercase text-stone-500 font-bold block">
-                    KEY CONTRIBUTIONS & BENCHMARKS
+                  <span className="text-xs font-mono uppercase text-stone-500 tracking-wider block">
+                    KEY CONTRIBUTIONS
                   </span>
-                  {contributions.length > 0 ? (
-                    <ul className="space-y-2 text-xs text-ink-800 font-sans leading-relaxed">
-                      {contributions.map((c, cIdx) => (
-                        <li key={cIdx} className="flex items-start gap-2">
-                          <span className="text-stone-400">•</span>
-                          <span>{c}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="text-xs text-stone-500 italic">Contributions recorded in experimental notes.</div>
-                  )}
-
-                  {prog.sourceUrl && (
-                    <div className="pt-2 border-t border-paper-200">
-                      <a
-                        href={prog.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-mono text-ink-900 font-medium"
-                      >
-                        <span>Repository Reference</span>
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                      </a>
-                    </div>
-                  )}
+                  <ul className="space-y-2 text-xs text-ink-700 font-sans">
+                    {contributions.map((c, cIdx) => (
+                      <li key={cIdx} className="flex items-start gap-2">
+                        <span className="text-stone-400">•</span>
+                        <span>{c}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             </div>
@@ -126,13 +112,10 @@ export const ResearchPage: React.FC = () => {
             <div className="w-10 h-10 rounded-full bg-paper-200 border border-paper-300 flex items-center justify-center mx-auto text-ink-800">
               <Microscope className="w-5 h-5" />
             </div>
-            <h3 className="text-xl font-display font-bold text-ink-900">Research Programs Registry</h3>
+            <h3 className="text-xl font-display font-bold text-ink-900">Research Inquiry Ledger</h3>
             <p className="text-xs sm:text-sm text-ink-600 font-sans leading-relaxed">
-              Formal research inquiries, algorithmic kinematic formulation programs, and experimental benchmarks will be catalogued here once verified.
+              Active research programs and technical formulation notes will be published here upon verification.
             </p>
-            <div className="text-[11px] font-mono text-stone-400 uppercase pt-2">
-              CANONICAL RESEARCH ARCHIVE
-            </div>
           </div>
         )}
       </div>
@@ -140,4 +123,3 @@ export const ResearchPage: React.FC = () => {
     </div>
   );
 };
-

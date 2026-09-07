@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { ArrowUpRight, ArrowRight, Layers, Compass, BrainCircuit, Cpu } from 'lucide-react';
-import { getProductionProjects } from '../../generated/projects';
+import { usePublicContent } from '../../context/PublicContentContext';
 
 // 3D Spatial Tilt Container
 const SpatialHeroCard: React.FC = () => {
@@ -104,7 +104,8 @@ const SpatialHeroCard: React.FC = () => {
 };
 
 export const DirectionCHybridSpatial: React.FC = () => {
-  const featuredProjects = getProductionProjects().slice(0, 2);
+  const { projects } = usePublicContent();
+  const featuredProjects = projects.slice(0, 2);
 
   return (
     <div className="bg-[#0b0e14] text-zinc-100 min-h-screen selection:bg-teal-400 selection:text-black font-sans">

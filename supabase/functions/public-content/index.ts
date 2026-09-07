@@ -70,13 +70,81 @@ async function handler(req: Request): Promise<Response> {
     return jsonResponse({ success: false, error: 'Content type parameter is required' }, 400);
   }
 
+  const supabaseUrl = (typeof Deno !== 'undefined' ? Deno.env.get('SUPABASE_URL') : '') || '';
+  const anonKey = (typeof Deno !== 'undefined' ? Deno.env.get('SUPABASE_ANON_KEY') : '') || '';
+
+  if (rawType.toLowerCase() === 'all') {
+    if (!supabaseUrl || !anonKey) {
+      return jsonResponse({
+        success: true,
+        contentType: 'all',
+        data: {
+          profile: null,
+          education: [],
+          experience: [],
+          projects: [],
+          research: [],
+          publications: [],
+          patents: [],
+          achievements: [],
+          certifications: [],
+          skills: [],
+          organizations: [],
+          blog: [],
+        },
+      });
+    }
+
+    try {
+      const allDomains: Record<string, string> = {
+        profile: 'profiles',
+        education: 'education',
+        experience: 'experience',
+        projects: 'projects',
+        research: 'research_programs',
+        publications: 'publications',
+        patents: 'patents',
+        achievements: 'achievements',
+        certifications: 'certifications',
+        skills: 'skills',
+        organizations: 'organizations',
+        blog: 'blog_posts',
+      };
+
+      const promises = Object.entries(allDomains).map(async ([key, table]) => {
+        const params = new URLSearchParams();
+        params.set('publication_status', 'eq.published');
+        params.set('verification_status', 'in.(USER_PROVIDED,GITHUB_VERIFIED,PUBLIC_WEB_VERIFIED)');
+        const restEndpoint = `${supabaseUrl}/rest/v1/${table}?${params.toString()}`;
+        const res = await fetch(restEndpoint, {
+          method: 'GET',
+          headers: {
+            'apikey': anonKey,
+            'Authorization': `Bearer ${anonKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!res.ok) return [key, key === 'profile' ? null : []];
+        const rows = await res.json();
+        return [key, key === 'profile' ? (rows[0] || null) : rows];
+      });
+
+      const results = await Promise.all(promises);
+      const data = Object.fromEntries(results);
+      return jsonResponse({
+        success: true,
+        contentType: 'all',
+        data,
+      });
+    } catch (err: any) {
+      return jsonResponse({ success: false, error: err.message || 'Internal error' }, 500);
+    }
+  }
+
   const tableName = DOMAIN_TABLE_MAP[rawType.toLowerCase()];
   if (!tableName) {
     return jsonResponse({ success: false, error: `Invalid content type: ${rawType}` }, 400);
   }
-
-  const supabaseUrl = (typeof Deno !== 'undefined' ? Deno.env.get('SUPABASE_URL') : '') || '';
-  const anonKey = (typeof Deno !== 'undefined' ? Deno.env.get('SUPABASE_ANON_KEY') : '') || '';
 
   if (!supabaseUrl || !anonKey) {
     return jsonResponse({

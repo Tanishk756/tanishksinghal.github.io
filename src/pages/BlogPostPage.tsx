@@ -1,12 +1,22 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getBlogPostBySlug } from '../generated/blog';
+import { usePublicContent } from '../context/PublicContentContext';
 import { Breadcrumbs } from '../components/layout/Breadcrumbs';
-import { ArrowLeft, Clock, Calendar, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Clock, Calendar, LoaderCircle } from 'lucide-react';
 
 export const BlogPostPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { getBlogPostBySlug, isLoading } = usePublicContent();
   const post = slug ? getBlogPostBySlug(slug) : undefined;
+
+  if (isLoading && !post) {
+    return (
+      <div className="pt-32 pb-24 max-w-4xl mx-auto px-4 sm:px-6 text-center flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <LoaderCircle className="w-8 h-8 animate-spin text-stone-400" />
+        <p className="text-xs font-mono text-stone-500 uppercase tracking-widest">Loading Article...</p>
+      </div>
+    );
+  }
 
   if (!post) {
     return (
@@ -34,14 +44,18 @@ export const BlogPostPage: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-4 text-xs font-mono text-stone-500">
           <span className="uppercase tracking-widest">{post.categories?.[0] || 'Technical Note'}</span>
           <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5" />
-              <span>{post.publishedDate}</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" />
-              <span>{post.readingTimeMinutes} min read</span>
-            </span>
+            {post.publishedDate && (
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>{post.publishedDate}</span>
+              </span>
+            )}
+            {post.readingTimeMinutes && (
+              <span className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5" />
+                <span>{post.readingTimeMinutes} min read</span>
+              </span>
+            )}
           </div>
         </div>
 
@@ -49,20 +63,24 @@ export const BlogPostPage: React.FC = () => {
           {post.title}
         </h1>
 
-        <p className="text-lg text-ink-700 font-serifDisplay italic leading-relaxed">
-          "{post.excerpt}"
-        </p>
+        {post.excerpt && (
+          <p className="text-lg text-ink-700 font-serifDisplay italic leading-relaxed">
+            "{post.excerpt}"
+          </p>
+        )}
 
-        <div className="flex flex-wrap gap-2 pt-2">
-          {post.tags.map((tag, idx) => (
-            <span
-              key={idx}
-              className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-paper-100 border border-paper-300 text-ink-700"
-            >
-              #{tag}
-            </span>
-          ))}
-        </div>
+        {post.tags && post.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-2">
+            {post.tags.map((tag, idx) => (
+              <span
+                key={idx}
+                className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-paper-100 border border-paper-300 text-ink-700"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Article Markdown Body */}
@@ -72,13 +90,9 @@ export const BlogPostPage: React.FC = () => {
         </div>
       </article>
 
-      {/* Footer / Provenance */}
+      {/* Footer */}
       <div className="p-6 rounded-2xl bg-paper-100 border border-paper-300 text-xs font-mono text-stone-600 flex items-center justify-between">
-        <span>AUTHOR: Tanishk Singhal</span>
-        <span className="inline-flex items-center gap-1">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>{post.verificationStatus}</span>
-        </span>
+        <span>AUTHOR: {post.author || 'Author'}</span>
       </div>
 
     </div>

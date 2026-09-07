@@ -1,19 +1,47 @@
 import React from 'react';
-import { profileData } from '../generated/profile';
-import { getProductionExperience } from '../generated/experience';
-import { getProductionSkills } from '../generated/skills';
-import { getProductionProjects } from '../generated/projects';
-import { getProductionEducation } from '../generated/education';
-import { Printer } from 'lucide-react';
+import { usePublicContent } from '../context/PublicContentContext';
+import { Printer, LoaderCircle } from 'lucide-react';
 
 export const ResumePage: React.FC = () => {
-  const experiences = getProductionExperience();
-  const skills = getProductionSkills();
-  const projects = getProductionProjects();
-  const education = getProductionEducation();
+  const { profile, experience: experiences, skills, projects, education, isLoading, error } = usePublicContent();
 
   const handlePrint = () => {
     window.print();
+  };
+
+  if (isLoading && !profile && experiences.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <LoaderCircle className="w-8 h-8 animate-spin text-stone-400" />
+        <p className="text-xs font-mono text-stone-500 uppercase tracking-widest">Loading Resume...</p>
+      </div>
+    );
+  }
+
+  if (error && !profile && experiences.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+        <h1 className="text-2xl font-display font-bold text-ink-900">Curriculum Vitae</h1>
+        <p className="text-sm font-sans text-stone-600">Content temporarily unavailable.</p>
+      </div>
+    );
+  }
+
+  const profileData = profile || {
+    fullName: 'Tanishk Singhal',
+    displayName: 'Tanishk Singhal',
+    headline: 'Robotics Researcher & Systems Engineer',
+    subheadline: '',
+    shortBio: '',
+    longBio: [],
+    location: 'India',
+    email: 'Tanishksinghal6285@gmail.com',
+    avatarUrl: '',
+    socials: { github: 'https://github.com/tanishk756', linkedin: '', googleScholar: '', researchGate: '' },
+    keyStats: [],
+    source: '',
+    verificationStatus: 'USER_PROVIDED' as const,
+    lastVerified: '',
   };
 
   return (
@@ -51,25 +79,35 @@ export const ResumePage: React.FC = () => {
             {profileData.headline}
           </div>
           <div className="flex flex-wrap gap-4 text-xs font-mono text-stone-600 pt-2">
-            <span>Email: {profileData.email}</span>
-            <span>·</span>
-            <span>Location: {profileData.location}</span>
-            <span>·</span>
-            <a href={profileData.socials.github} target="_blank" rel="noopener noreferrer" className="text-ink-900 hover:underline">
-              github.com/Tanishk756
-            </a>
+            {profileData.email && <span>Email: {profileData.email}</span>}
+            {profileData.location && (
+              <>
+                <span>·</span>
+                <span>Location: {profileData.location}</span>
+              </>
+            )}
+            {profileData.socials?.github && (
+              <>
+                <span>·</span>
+                <a href={profileData.socials.github} target="_blank" rel="noopener noreferrer" className="text-ink-900 hover:underline">
+                  GitHub Profile
+                </a>
+              </>
+            )}
           </div>
         </div>
 
         {/* Executive Summary */}
-        <div className="space-y-2">
-          <h3 className="text-xs font-mono uppercase font-bold text-stone-500 tracking-wider">
-            EXECUTIVE SUMMARY
-          </h3>
-          <p className="text-xs sm:text-sm text-ink-700 leading-relaxed">
-            {profileData.shortBio}
-          </p>
-        </div>
+        {profileData.shortBio && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-mono uppercase font-bold text-stone-500 tracking-wider">
+              EXECUTIVE SUMMARY
+            </h3>
+            <p className="text-xs sm:text-sm text-ink-700 leading-relaxed">
+              {profileData.shortBio}
+            </p>
+          </div>
+        )}
 
         {/* Professional Experience */}
         {experiences.filter(e => ['EMPLOYMENT', 'INTERNSHIP', 'CONTRACT', 'FOUNDER'].includes(e.type)).length > 0 && (
@@ -136,60 +174,68 @@ export const ResumePage: React.FC = () => {
         )}
 
         {/* Key Engineering Projects */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-mono uppercase font-bold text-stone-500 tracking-wider">
-            KEY ENGINEERING CASE STUDIES
-          </h3>
+        {projects.length > 0 && (
           <div className="space-y-4">
-            {projects.map((proj) => (
-              <div key={proj.id} className="space-y-1 text-xs">
-                <div className="flex items-baseline justify-between">
-                  <span className="font-bold text-ink-900">{proj.title}</span>
-                  <span className="font-mono text-stone-500">{proj.startDate}</span>
+            <h3 className="text-xs font-mono uppercase font-bold text-stone-500 tracking-wider">
+              KEY ENGINEERING CASE STUDIES
+            </h3>
+            <div className="space-y-4">
+              {projects.map((proj) => (
+                <div key={proj.id} className="space-y-1 text-xs">
+                  <div className="flex items-baseline justify-between">
+                    <span className="font-bold text-ink-900">{proj.title}</span>
+                    <span className="font-mono text-stone-500">{proj.startDate}</span>
+                  </div>
+                  <p className="text-ink-600">{proj.tagline}</p>
+                  {proj.subcategories && proj.subcategories.length > 0 && (
+                    <div className="font-mono text-[11px] text-stone-500">
+                      Technologies: {proj.subcategories.join(', ')}
+                    </div>
+                  )}
                 </div>
-                <p className="text-ink-600">{proj.tagline}</p>
-                <div className="font-mono text-[11px] text-stone-500">
-                  Technologies: {proj.subcategories.join(', ')}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Education & Academic Credentials */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-mono uppercase font-bold text-stone-500 tracking-wider">
-            ACADEMIC BACKGROUND & EDUCATION
-          </h3>
+        {education.length > 0 && (
           <div className="space-y-4">
-            {education.map((edu) => (
-              <div key={edu.id} className="space-y-1 text-xs">
-                <div className="flex flex-col sm:flex-row sm:items-baseline justify-between">
-                  <span className="font-bold text-ink-900">{edu.institution}</span>
-                  <span className="font-mono text-stone-500">{edu.startDate} — {edu.endDate}</span>
+            <h3 className="text-xs font-mono uppercase font-bold text-stone-500 tracking-wider">
+              ACADEMIC BACKGROUND & EDUCATION
+            </h3>
+            <div className="space-y-4">
+              {education.map((edu) => (
+                <div key={edu.id} className="space-y-1 text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-baseline justify-between">
+                    <span className="font-bold text-ink-900">{edu.institution}</span>
+                    <span className="font-mono text-stone-500">{edu.startDate} {edu.endDate ? `— ${edu.endDate}` : ''}</span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-baseline justify-between text-ink-700">
+                    <span>{edu.program}</span>
+                    {edu.grade && <span className="font-mono text-stone-600">Grade: {edu.grade}</span>}
+                  </div>
                 </div>
-                <div className="flex flex-col sm:flex-row sm:items-baseline justify-between text-ink-700">
-                  <span>{edu.program}</span>
-                  {edu.grade && <span className="font-mono text-stone-600">Grade: {edu.grade}</span>}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Technical Skills Inventory */}
-        <div className="space-y-3">
-          <h3 className="text-xs font-mono uppercase font-bold text-stone-500 tracking-wider">
-            TECHNICAL DISCIPLINES & TOOLING
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {skills.map((s, sIdx) => (
-              <span key={sIdx} className="px-2.5 py-1 rounded bg-paper-100 border border-paper-300 text-xs font-mono text-ink-800">
-                {s.name}
-              </span>
-            ))}
+        {skills.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-xs font-mono uppercase font-bold text-stone-500 tracking-wider">
+              TECHNICAL DISCIPLINES & TOOLING
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {skills.map((s, sIdx) => (
+                <span key={sIdx} className="px-2.5 py-1 rounded bg-paper-100 border border-paper-300 text-xs font-mono text-ink-800">
+                  {s.name}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 

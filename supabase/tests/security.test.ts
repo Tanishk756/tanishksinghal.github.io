@@ -1955,11 +1955,11 @@ async function runSupabaseSecuritySuite() {
   // -------------------------------------------------------------
   console.log('\n--- DOMAIN 23: CMS-DRIVEN PUBLIC ABOUT PAGE INTEGRATION TESTS ---');
 
-  // Test 200: About page consumes generated Profile data
-  const aboutPageImports = fs.readFileSync(path.join(process.cwd(), 'src/pages/AboutPage.tsx'), 'utf8');
+  // Test 200: About page consumes runtime usePublicContent hook
+  const aboutPageSrc = fs.readFileSync(path.join(process.cwd(), 'src/pages/AboutPage.tsx'), 'utf8');
   assert(
-    aboutPageImports.includes("import { profileData } from '../generated/profile'"),
-    'About page consumes generated Profile data'
+    aboutPageSrc.includes("usePublicContent"),
+    'About page consumes runtime usePublicContent hook'
   );
 
   // Test 201: No draft Profile data reaches public pages
@@ -1982,24 +1982,24 @@ async function runSupabaseSecuritySuite() {
     'Published Profile changes reach About page'
   );
 
-  // Test 203: Hardcoded personal biography cannot override CMS content
+  // Test 203: Hardcoded personal biography cannot override dynamic CMS content
   assert(
-    aboutPageImports.includes('{profileData.subheadline || profileData.headline}') &&
-    aboutPageImports.includes('{profileData.shortBio}'),
+    aboutPageSrc.includes('{profileData.subheadline || profileData.headline}') &&
+    aboutPageSrc.includes('{profileData.shortBio}'),
     'Hardcoded personal biography cannot override CMS content'
   );
 
   // Test 204: Legacy src/content/profile.ts is not used by AboutPage
   assert(
-    !aboutPageImports.includes('../content/profile') && !aboutPageImports.includes('/content/profile'),
-    'Legacy src/content/profile.ts is not used by AboutPage'
+    !aboutPageSrc.includes('../content/profile') && !aboutPageSrc.includes('/content/profile') && !aboutPageSrc.includes('../generated/profile'),
+    'Legacy src/content/profile.ts and generated/profile are not used by AboutPage'
   );
 
   // Test 205: Public page contains no CMS provenance labels
   assert(
-    !aboutPageImports.includes('USER PROVIDED · VERIFIED') &&
-    !aboutPageImports.includes('VERIFIED LEDGER') &&
-    !aboutPageImports.includes('Anchor identity:'),
+    !aboutPageSrc.includes('USER PROVIDED · VERIFIED') &&
+    !aboutPageSrc.includes('VERIFIED LEDGER') &&
+    !aboutPageSrc.includes('Anchor identity:'),
     'Public page contains no CMS provenance labels'
   );
 
@@ -2009,6 +2009,104 @@ async function runSupabaseSecuritySuite() {
     !publishTransitionSafety.valid,
     'Existing Profile publication safety remains intact (draft cannot jump directly to published without approval)'
   );
+
+  // -------------------------------------------------------------
+  // DOMAIN 24: REAL-TIME PUBLIC CMS RUNTIME DATA LAYER (12 Tests)
+  // -------------------------------------------------------------
+  console.log('\n--- DOMAIN 24: REAL-TIME PUBLIC CMS RUNTIME DATA LAYER ---');
+
+  // Test 207: Published Supabase Profile reaches public runtime data client
+  const canonicalPublishedProfile = {
+    id: 'prof_canon_01',
+    content_type: 'profile',
+    full_name: 'Tanishk Singhal',
+    headline: 'Robotics Researcher & Systems Engineer',
+    short_bio: 'Hands-on robotics systems engineer.',
+    publication_status: 'published',
+    verification_status: 'USER_PROVIDED',
+  };
+  db.content_items.push(canonicalPublishedProfile);
+  const runtimeFeed = db.getPublicContent('profile');
+  assert(
+    runtimeFeed.some(p => p.id === 'prof_canon_01' && p.headline === 'Robotics Researcher & Systems Engineer'),
+    'Published Supabase Profile reaches public runtime data client'
+  );
+
+  // Test 208: Draft Profile does not reach public runtime data client
+  const runtimeDraftProfile = {
+    id: 'prof_draft_unreleased',
+    content_type: 'profile',
+    headline: 'Draft Secret Role',
+    publication_status: 'draft',
+    verification_status: 'USER_PROVIDED',
+  };
+  db.content_items.push(runtimeDraftProfile);
+  assert(
+    !db.getPublicContent('profile').some(p => p.id === 'prof_draft_unreleased'),
+    'Draft Profile does not reach public runtime data client'
+  );
+
+  // Test 209: Publishing Profile in Supabase updates public dataset without code rebuild
+  const unverifiedBeforePublish = db.getPublicContent('profile').find(p => p.id === 'prof_draft_unreleased');
+  assert(!unverifiedBeforePublish, 'Unpublished profile is absent before publish');
+  runtimeDraftProfile.publication_status = 'published';
+  const afterPublishFeed = db.getPublicContent('profile').find(p => p.id === 'prof_draft_unreleased');
+  assert(afterPublishFeed?.headline === 'Draft Secret Role', 'Publishing Profile in Supabase updates public dataset without code rebuild');
+
+  // Test 210: Zero public pages import from src/generated/
+  const publicPageFiles = fs.readdirSync(path.join(process.cwd(), 'src/pages')).filter(f => f.endsWith('.tsx') && !f.startsWith('Admin'));
+  const hasGeneratedImports = publicPageFiles.some(f => {
+    const content = fs.readFileSync(path.join(process.cwd(), 'src/pages', f), 'utf8');
+    return content.includes('/generated/') || content.includes('../generated/');
+  });
+  assert(!hasGeneratedImports, 'Zero public pages import from src/generated/');
+
+  // Test 211: Legacy src/content/profile.ts cannot override published Supabase data
+  const legacyContentInPublic = publicPageFiles.some(f => {
+    const content = fs.readFileSync(path.join(process.cwd(), 'src/pages', f), 'utf8');
+    return content.includes('/content/') || content.includes('../content/');
+  });
+  assert(!legacyContentInPublic, 'Legacy src/content/ cannot override published Supabase data');
+
+  // Test 212: Public endpoint excludes PROBABLE records
+  const probableProfile = { id: 'prof_prob', content_type: 'profile', publication_status: 'published', verification_status: 'PROBABLE' };
+  db.content_items.push(probableProfile);
+  assert(!db.getPublicContent('profile').some(p => p.id === 'prof_prob'), 'Public endpoint strictly excludes PROBABLE records');
+
+  // Test 213: Public endpoint excludes UNVERIFIED records
+  const unverifiedProfile = { id: 'prof_unver', content_type: 'profile', publication_status: 'published', verification_status: 'UNVERIFIED' };
+  db.content_items.push(unverifiedProfile);
+  assert(!db.getPublicContent('profile').some(p => p.id === 'prof_unver'), 'Public endpoint strictly excludes UNVERIFIED records');
+
+  // Test 214: Public endpoint excludes review & approved-unpublished records
+  const reviewProfile = { id: 'prof_rev', content_type: 'profile', publication_status: 'review', verification_status: 'USER_PROVIDED' };
+  const approvedUnpub = { id: 'prof_app_unpub', content_type: 'profile', publication_status: 'approved', verification_status: 'USER_PROVIDED' };
+  db.content_items.push(reviewProfile, approvedUnpub);
+  const publicFiltered = db.getPublicContent('profile');
+  assert(!publicFiltered.some(p => p.id === 'prof_rev' || p.id === 'prof_app_unpub'), 'Public endpoint strictly excludes review & approved-unpublished records');
+
+  // Test 215: PublicContentProvider gracefully handles runtime loading state
+  const providerSrc = fs.readFileSync(path.join(process.cwd(), 'src/context/PublicContentContext.tsx'), 'utf8');
+  assert(providerSrc.includes('isLoading') && providerSrc.includes('setIsLoading'), 'PublicContentProvider handles runtime loading state');
+
+  // Test 216: PublicContentProvider gracefully handles runtime API failure with safe message
+  const clientSrc = fs.readFileSync(path.join(process.cwd(), 'src/cms/publicContentClient.ts'), 'utf8');
+  assert(
+    clientSrc.includes('Content temporarily unavailable.') && !clientSrc.includes('DATABASE_URL') && !clientSrc.includes('SUPABASE_SERVICE_ROLE_KEY'),
+    'PublicContentProvider handles runtime API failure with safe message'
+  );
+
+  // Test 217: Admin mutation workflow remains strictly protected
+  const unauthEdit = authenticateSupabaseRequest({
+    headers: { get: (h: string) => h === 'authorization' ? null : null }
+  } as any);
+  assert(unauthEdit.errorResponse !== null, 'Admin mutation workflow remains strictly protected');
+
+  // Test 218: Normalizers sanitize and defend against null, malformed JSON, and undefined inputs
+  const rawMalformed = { full_name: 'Test Name', long_bio: null, social_links_json: null };
+  const clientModule = await import('../../src/cms/publicContentClient.js').catch(async () => await import('../../src/cms/publicContentClient.ts'));
+  const normalized = clientModule.normalizeProfile(rawMalformed);
+  assert(normalized !== null && normalized.fullName === 'Test Name' && Array.isArray(normalized.longBio), 'Normalizers sanitize and defend against null and malformed inputs');
 
   // CLEANUP: Clean all temporary synthetic test records from memory
   db.content_items = [];

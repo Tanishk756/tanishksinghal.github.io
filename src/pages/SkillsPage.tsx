@@ -1,17 +1,37 @@
 import React from 'react';
-import { getProductionSkills } from '../generated/skills';
-import { ShieldCheck } from 'lucide-react';
+import { usePublicContent } from '../context/PublicContentContext';
+import { LoaderCircle } from 'lucide-react';
 
 export const SkillsPage: React.FC = () => {
-  const skills = getProductionSkills();
+  const { skills, isLoading, error } = usePublicContent();
 
   const categories = [
     'Robotics & Control',
+    'Autonomous Systems',
     'AI & ML',
     'Firmware & Embedded',
     'Hardware & Circuits',
+    'Space Systems & UAV',
     'Software & Tools',
   ] as const;
+
+  if (isLoading && skills.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <LoaderCircle className="w-8 h-8 animate-spin text-stone-400" />
+        <p className="text-xs font-mono text-stone-500 uppercase tracking-widest">Loading Competencies...</p>
+      </div>
+    );
+  }
+
+  if (error && skills.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+        <h1 className="text-4xl font-display font-bold text-ink-900">Competencies & Tools</h1>
+        <p className="text-sm font-sans text-stone-600">Content temporarily unavailable.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-24 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
@@ -27,7 +47,7 @@ export const SkillsPage: React.FC = () => {
           Competencies & Tools
         </h1>
         <p className="text-base sm:text-lg text-ink-600 font-serifDisplay italic max-w-2xl">
-          Categorized engineering disciplines, algorithmic frameworks, middleware tooling, and verified technical proficiencies.
+          Categorized engineering disciplines, algorithmic frameworks, middleware tooling, and technical proficiencies.
         </p>
       </div>
 
@@ -35,6 +55,8 @@ export const SkillsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {categories.map((cat, idx) => {
           const catSkills = skills.filter((s) => s.category === cat);
+          if (catSkills.length === 0 && skills.length > 0) return null;
+
           return (
             <div
               key={cat}
@@ -60,9 +82,6 @@ export const SkillsPage: React.FC = () => {
                         <span className="font-semibold text-ink-900 block">{s.name}</span>
                         <span className="text-[11px] font-mono text-stone-500 uppercase">{s.level}</span>
                       </div>
-                      <span className="text-[10px] font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                        VERIFIED
-                      </span>
                     </div>
                   ))}
                   {catSkills.length === 0 && (
@@ -71,11 +90,6 @@ export const SkillsPage: React.FC = () => {
                     </div>
                   )}
                 </div>
-              </div>
-
-              <div className="pt-3 border-t border-paper-200 flex items-center gap-1 text-[10px] font-mono text-stone-400">
-                <ShieldCheck className="w-3 h-3 text-ink-600" />
-                <span>Verified through code artifacts</span>
               </div>
             </div>
           );

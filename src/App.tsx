@@ -6,6 +6,7 @@ import { Footer } from './components/layout/Footer';
 import { ScrollToTop } from './components/layout/ScrollToTop';
 import { PageTransition } from './components/ui/PageTransition';
 import { AuthProvider } from './cms/AuthContext';
+import { PublicContentProvider } from './context/PublicContentContext';
 
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
@@ -133,10 +134,12 @@ export function App() {
   const basePath = (import.meta as any).env?.BASE_URL || '/';
   return (
     <AuthProvider>
-      <Router basename={basePath}>
-        <ScrollToTop />
-        <AppContent />
-      </Router>
+      <PublicContentProvider>
+        <Router basename={basePath}>
+          <ScrollToTop />
+          <AppContent />
+        </Router>
+      </PublicContentProvider>
     </AuthProvider>
   );
 }

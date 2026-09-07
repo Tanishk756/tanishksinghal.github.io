@@ -1,12 +1,27 @@
 import React from 'react';
-import { getProductionExperience } from '../generated/experience';
-import { ShieldCheck, Briefcase } from 'lucide-react';
+import { usePublicContent } from '../context/PublicContentContext';
+import { Briefcase, LoaderCircle } from 'lucide-react';
 
 export const ExperiencePage: React.FC = () => {
-  const productionExperiences = getProductionExperience();
-  const experiences = Array.isArray(productionExperiences)
-    ? productionExperiences.filter(Boolean)
-    : [];
+  const { experience: experiences, isLoading, error } = usePublicContent();
+
+  if (isLoading && experiences.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <LoaderCircle className="w-8 h-8 animate-spin text-stone-400" />
+        <p className="text-xs font-mono text-stone-500 uppercase tracking-widest">Loading Experience...</p>
+      </div>
+    );
+  }
+
+  if (error && experiences.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+        <h1 className="text-4xl font-display font-bold text-ink-900">Engineering Chronology</h1>
+        <p className="text-sm font-sans text-stone-600">Content temporarily unavailable.</p>
+      </div>
+    );
+  }
 
   const normalizeDesc = (desc: any): string[] => {
     if (!desc) return [];
@@ -65,12 +80,6 @@ export const ExperiencePage: React.FC = () => {
                       <span className="text-xs font-mono text-stone-500 uppercase tracking-wider block">
                         {exp.location ? `${exp.location}${exp.workMode ? ` · ${exp.workMode}` : ''}` : exp.domain || exp.type}
                       </span>
-                      {exp.verificationStatus && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-ink-700">
-                          <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                          <span>{exp.verificationStatus}</span>
-                        </span>
-                      )}
                     </div>
                     <div className="md:col-span-8 space-y-4">
                       <div>
@@ -122,12 +131,6 @@ export const ExperiencePage: React.FC = () => {
                       <span className="text-xs font-mono text-stone-500 uppercase tracking-wider block">
                         {exp.type}
                       </span>
-                      {exp.verificationStatus && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-ink-700">
-                          <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                          <span>{exp.verificationStatus}</span>
-                        </span>
-                      )}
                     </div>
                     <div className="md:col-span-8 space-y-4">
                       <div>
@@ -163,13 +166,10 @@ export const ExperiencePage: React.FC = () => {
             <div className="w-10 h-10 rounded-full bg-paper-200 border border-paper-300 flex items-center justify-center mx-auto text-ink-800">
               <Briefcase className="w-5 h-5" />
             </div>
-            <h3 className="text-xl font-display font-bold text-ink-900">Engineering Chronology Registry</h3>
+            <h3 className="text-xl font-display font-bold text-ink-900">Engineering Chronology Archive</h3>
             <p className="text-xs sm:text-sm text-ink-600 font-sans leading-relaxed">
-              Professional experience, robotics engineering practice, and institutional research appointments are undergoing verification and will appear here once authenticated.
+              Professional experience, robotics engineering practice, and institutional research appointments will appear here.
             </p>
-            <div className="text-[11px] font-mono text-stone-400 uppercase pt-2">
-              CANONICAL EXPERIENCE ARCHIVE
-            </div>
           </div>
         )}
       </div>
@@ -177,4 +177,3 @@ export const ExperiencePage: React.FC = () => {
     </div>
   );
 };
-

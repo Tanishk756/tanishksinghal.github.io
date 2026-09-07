@@ -1,9 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Github, ArrowUp } from 'lucide-react';
-import { profileData } from '../../generated/profile';
+import { usePublicContent } from '../../context/PublicContentContext';
 
 export const Footer: React.FC = () => {
+  const { profile } = usePublicContent();
+  const fullName = profile?.fullName || 'Tanishk Singhal';
+  const githubUrl = profile?.socials?.github || 'https://github.com/tanishk756';
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -19,7 +22,7 @@ export const Footer: React.FC = () => {
           <div className="space-y-4 md:col-span-2">
             <div className="flex items-center gap-2.5">
               <span className="font-sans font-bold text-base tracking-tight text-ink-900">
-                {profileData.fullName.toUpperCase()}
+                {fullName.toUpperCase()}
               </span>
             </div>
 
@@ -114,13 +117,13 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a
-                  href={profileData.socials.github}
+                  href={githubUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-ink-900 transition-colors inline-flex items-center gap-1"
                 >
                   <Github className="w-3.5 h-3.5" />
-                  <span>GitHub @Tanishk756</span>
+                  <span>GitHub Profile</span>
                 </a>
               </li>
             </ul>

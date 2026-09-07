@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Menu, X, ArrowUpRight, ChevronDown } from 'lucide-react';
-import { profileData } from '../../generated/profile';
+import { usePublicContent } from '../../context/PublicContentContext';
 
 export const Navbar: React.FC = () => {
+  const { profile } = usePublicContent();
+  const displayName = profile?.displayName || profile?.fullName || 'Tanishk Singhal';
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
@@ -56,7 +58,7 @@ export const Navbar: React.FC = () => {
           <Link to="/" className="flex items-center gap-3 group">
             <div className="flex flex-col">
               <span className="font-sans font-bold text-base tracking-tight text-ink-900 group-hover:text-ink-700 transition-colors">
-                {profileData.displayName.toUpperCase()}
+                {displayName.toUpperCase()}
               </span>
               <span className="text-[11px] font-mono text-stone-500 tracking-wider">
                 ROBOTICS & AUTONOMOUS SYSTEMS

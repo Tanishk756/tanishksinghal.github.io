@@ -1,13 +1,28 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { getProductionProjects } from '../generated/projects';
-import { ArrowRight, ArrowUpRight, ShieldCheck, FolderGit2 } from 'lucide-react';
+import { usePublicContent } from '../context/PublicContentContext';
+import { ArrowRight, ArrowUpRight, FolderGit2, LoaderCircle } from 'lucide-react';
 
 export const ProjectsPage: React.FC = () => {
-  const productionProjects = getProductionProjects();
-  const projects = Array.isArray(productionProjects)
-    ? productionProjects.filter(Boolean)
-    : [];
+  const { projects, isLoading, error } = usePublicContent();
+
+  if (isLoading && projects.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <LoaderCircle className="w-8 h-8 animate-spin text-stone-400" />
+        <p className="text-xs font-mono text-stone-500 uppercase tracking-widest">Loading Projects...</p>
+      </div>
+    );
+  }
+
+  if (error && projects.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+        <h1 className="text-3xl font-display font-bold text-ink-900">Engineering Case Studies</h1>
+        <p className="text-sm font-sans text-stone-600">Content temporarily unavailable.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-24 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
@@ -52,15 +67,6 @@ export const ProjectsPage: React.FC = () => {
                     </span>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  {project.verificationStatus && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-paper-100 border border-paper-300 text-[11px] font-mono text-ink-800">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>{project.verificationStatus}</span>
-                    </span>
-                  )}
-                </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -87,39 +93,39 @@ export const ProjectsPage: React.FC = () => {
                   )}
                 </div>
 
-              <div className="lg:col-span-4 p-5 rounded-2xl bg-paper-100 border border-paper-300 space-y-3">
-                <div className="text-[11px] font-mono uppercase text-stone-500 tracking-wider">
-                  ROLE & METHODOLOGY
-                </div>
-                <div className="text-xs font-sans text-ink-800 font-medium">
-                  {project.role}
-                </div>
-                <div className="pt-3 border-t border-paper-200 flex flex-col gap-2">
-                  <Link
-                    to={`/projects/${project.slug}`}
-                    className="inline-flex items-center justify-between px-4 py-2 rounded-xl bg-ink-900 text-paper-100 hover:bg-ink-800 text-xs font-sans font-medium uppercase tracking-wider transition-colors"
-                  >
-                    <span>Read Monograph</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-
-                  {project.githubUrl && (
-                    <a
-                      href={project.githubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-between px-4 py-1.5 text-xs font-mono text-ink-600 hover:text-ink-900"
+                <div className="lg:col-span-4 p-5 rounded-2xl bg-paper-100 border border-paper-300 space-y-3">
+                  <div className="text-[11px] font-mono uppercase text-stone-500 tracking-wider">
+                    ROLE & METHODOLOGY
+                  </div>
+                  <div className="text-xs font-sans text-ink-800 font-medium">
+                    {project.role}
+                  </div>
+                  <div className="pt-3 border-t border-paper-200 flex flex-col gap-2">
+                    <Link
+                      to={`/projects/${project.slug}`}
+                      className="inline-flex items-center justify-between px-4 py-2 rounded-xl bg-ink-900 text-paper-100 hover:bg-ink-800 text-xs font-sans font-medium uppercase tracking-wider transition-colors"
                     >
-                      <span>Repository ↗</span>
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                    </a>
-                  )}
+                      <span>Read Monograph</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+
+                    {project.githubUrl && (
+                      <a
+                        href={project.githubUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-between px-4 py-1.5 text-xs font-mono text-ink-600 hover:text-ink-900"
+                      >
+                        <span>Repository ↗</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
 
         {projects.length === 0 && (
           <div className="p-16 rounded-3xl bg-white border border-paper-400 shadow-editorial text-center space-y-4 max-w-2xl mx-auto">
@@ -128,11 +134,8 @@ export const ProjectsPage: React.FC = () => {
             </div>
             <h3 className="text-xl font-display font-bold text-ink-900">Systems & Projects Archive</h3>
             <p className="text-xs sm:text-sm text-ink-600 font-sans leading-relaxed">
-              Curated engineering case studies and robotics monographs will be indexed here following verification.
+              Curated engineering case studies and robotics monographs will be indexed here.
             </p>
-            <div className="text-[11px] font-mono text-stone-400 uppercase pt-2">
-              CURATED REPOSITORY ARCHIVE
-            </div>
           </div>
         )}
       </div>

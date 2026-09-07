@@ -1,9 +1,27 @@
 import React from 'react';
-import { getProductionPatents } from '../generated/patents';
-import { ShieldCheck, Info } from 'lucide-react';
+import { usePublicContent } from '../context/PublicContentContext';
+import { Info, LoaderCircle } from 'lucide-react';
 
 export const PatentsPage: React.FC = () => {
-  const patents = getProductionPatents();
+  const { patents, isLoading, error } = usePublicContent();
+
+  if (isLoading && patents.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <LoaderCircle className="w-8 h-8 animate-spin text-stone-400" />
+        <p className="text-xs font-mono text-stone-500 uppercase tracking-widest">Loading Patents...</p>
+      </div>
+    );
+  }
+
+  if (error && patents.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+        <h1 className="text-4xl font-display font-bold text-ink-900">Patents & Inventions</h1>
+        <p className="text-sm font-sans text-stone-600">Content temporarily unavailable.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-24 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
@@ -27,22 +45,18 @@ export const PatentsPage: React.FC = () => {
       <div className="space-y-8">
         {patents.map((pat, idx) => (
           <div
-            key={pat.id}
+            key={pat.id || idx}
             className="p-8 sm:p-10 rounded-3xl bg-white border border-paper-400 shadow-editorial space-y-4"
           >
             <div className="flex items-center justify-between pb-4 border-b border-paper-300">
               <span className="text-xs font-mono text-stone-500 uppercase">
                 PATENT // 0{idx + 1} · {pat.status.toUpperCase()}
               </span>
-              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-ink-800">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>{pat.verificationStatus}</span>
-              </span>
             </div>
 
             <h2 className="text-2xl font-display font-bold text-ink-900">{pat.title}</h2>
             <div className="text-xs font-mono text-stone-600">
-              Inventors: {pat.inventors.join(', ')} | Jurisdiction: {pat.jurisdiction}
+              Inventors: {pat.inventors?.join(', ')} | Jurisdiction: {pat.jurisdiction}
             </div>
             <p className="text-xs sm:text-sm text-ink-600 font-sans leading-relaxed">{pat.abstract}</p>
           </div>
@@ -55,11 +69,8 @@ export const PatentsPage: React.FC = () => {
             </div>
             <h3 className="text-xl font-display font-bold text-ink-900">Intellectual Property Registry</h3>
             <p className="text-xs sm:text-sm text-ink-600 font-sans leading-relaxed">
-              Patent filings and provisional intellectual property disclosures are currently under institutional review and will be published upon formal granting and official gazette indexing.
+              Patent filings and intellectual property disclosures will be published here upon official granting and gazette indexing.
             </p>
-            <div className="text-[11px] font-mono text-stone-400 uppercase pt-2">
-              QUARANTINE ENFORCED // NO UNVERIFIED CLAIMS PUBLISHED
-            </div>
           </div>
         )}
       </div>

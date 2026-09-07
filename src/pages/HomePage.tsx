@@ -1,17 +1,39 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { InteractiveCenterpiece } from '../components/ui/InteractiveCenterpiece';
-import { getProductionProjects } from '../generated/projects';
-import { getProductionResearch } from '../generated/research';
-import { getProductionPublications } from '../generated/publications';
-import { getProductionBlogPosts } from '../generated/blog';
-import { ArrowUpRight, ArrowRight, ShieldCheck, CornerDownRight } from 'lucide-react';
+import { usePublicContent } from '../context/PublicContentContext';
+import { ArrowUpRight, ArrowRight, ShieldCheck, CornerDownRight, LoaderCircle } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
-  const featuredProjects = getProductionProjects().slice(0, 3);
-  const researchItems = getProductionResearch().slice(0, 2);
-  const publications = getProductionPublications().slice(0, 2);
-  const blogPosts = getProductionBlogPosts().slice(0, 2);
+  const { profile, projects, research, publications, blogPosts, isLoading, error } = usePublicContent();
+
+  const featuredProjects = projects.slice(0, 3);
+  const researchItems = research.slice(0, 2);
+  const recentPublications = publications.slice(0, 2);
+  const recentBlogPosts = blogPosts.slice(0, 2);
+
+  if (isLoading && !profile && projects.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <LoaderCircle className="w-8 h-8 animate-spin text-stone-400" />
+        <p className="text-xs font-mono text-stone-500 uppercase tracking-widest">Loading Portfolio...</p>
+      </div>
+    );
+  }
+
+  if (error && !profile && projects.length === 0) {
+    return (
+      <div className="pt-32 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+        <h1 className="text-3xl font-display font-bold text-ink-900">Engineering Portfolio</h1>
+        <p className="text-sm font-sans text-stone-600">Content temporarily unavailable.</p>
+      </div>
+    );
+  }
+
+  const displayName = profile?.displayName || profile?.fullName || 'Tanishk Singhal';
+  const nameParts = displayName.split(' ');
+  const firstName = nameParts[0] || 'TANISHK';
+  const lastName = nameParts.slice(1).join(' ') || 'Singhal';
 
   return (
     <div className="pt-24 pb-24 space-y-32">
@@ -29,17 +51,19 @@ export const HomePage: React.FC = () => {
               </div>
 
               <h1 className="text-5xl sm:text-7xl lg:text-8xl font-display font-extrabold tracking-tight text-ink-900 leading-[0.95]">
-                TANISHK<br />
-                <span className="font-serifDisplay italic font-normal text-ink-700">Singhal</span>
+                {firstName.toUpperCase()}<br />
+                <span className="font-serifDisplay italic font-normal text-ink-700">{lastName}</span>
               </h1>
             </div>
 
-            <p className="text-xl sm:text-2xl text-ink-700 font-serifDisplay italic leading-relaxed max-w-xl">
-              "Building intelligent systems that move from rigorous mathematical formulation to real-world deployment."
-            </p>
+            {profile?.headline && (
+              <p className="text-xl sm:text-2xl text-ink-700 font-serifDisplay italic leading-relaxed max-w-xl">
+                "{profile.headline}"
+              </p>
+            )}
 
             <p className="text-sm sm:text-base text-ink-600 font-sans leading-relaxed max-w-xl">
-              Robotics researcher and systems engineer focusing on autonomous mobile navigation, closed-loop ROS 2 kinematic control, embedded firmware architectures, and applied machine learning pipelines.
+              {profile?.shortBio || profile?.subheadline || 'Robotics researcher and systems engineer focusing on autonomous mobile navigation, closed-loop ROS 2 kinematic control, embedded firmware architectures, and applied machine learning pipelines.'}
             </p>
 
             {/* Quick CTAs */}
@@ -126,16 +150,18 @@ export const HomePage: React.FC = () => {
                 </div>
 
                 {/* Subdiscipline tags */}
-                <div className="flex flex-wrap gap-2">
-                  {project.subcategories.map((sub, sIdx) => (
-                    <span
-                      key={sIdx}
-                      className="text-[11px] font-mono px-2.5 py-0.5 rounded-lg bg-paper-100 text-ink-700 border border-paper-300"
-                    >
-                      {sub}
-                    </span>
-                  ))}
-                </div>
+                {project.subcategories && project.subcategories.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {project.subcategories.map((sub, sIdx) => (
+                      <span
+                        key={sIdx}
+                        className="text-[11px] font-mono px-2.5 py-0.5 rounded-lg bg-paper-100 text-ink-700 border border-paper-300"
+                      >
+                        {sub}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <div className="pt-4 flex items-center gap-4">
                   <Link
@@ -175,6 +201,12 @@ export const HomePage: React.FC = () => {
               </div>
             </div>
           ))}
+
+          {featuredProjects.length === 0 && (
+            <div className="p-12 text-center rounded-3xl bg-white border border-paper-400 text-xs font-mono text-stone-500">
+              Selected engineering case studies are being indexed.
+            </div>
+          )}
         </div>
       </section>
 
@@ -209,6 +241,11 @@ export const HomePage: React.FC = () => {
                   <p className="text-xs text-ink-600 font-sans leading-relaxed">{prog.summary}</p>
                 </div>
               ))}
+              {researchItems.length === 0 && (
+                <div className="p-6 rounded-2xl bg-white border border-paper-400 text-xs font-mono text-stone-500">
+                  Research programs are being indexed.
+                </div>
+              )}
             </div>
           </div>
 
@@ -229,7 +266,7 @@ export const HomePage: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              {publications.map((pub) => (
+              {recentPublications.map((pub) => (
                 <div key={pub.id} className="p-5 rounded-2xl bg-white border border-paper-400 space-y-2 shadow-xs">
                   <span className="text-[10px] font-mono text-stone-500 uppercase">
                     {pub.venue} · {pub.year}
@@ -238,9 +275,9 @@ export const HomePage: React.FC = () => {
                   <p className="text-xs text-ink-600 font-sans line-clamp-2">{pub.abstract}</p>
                 </div>
               ))}
-              {publications.length === 0 && (
+              {recentPublications.length === 0 && (
                 <div className="p-6 rounded-2xl bg-white border border-paper-400 text-xs font-mono text-stone-500 space-y-1">
-                  <div className="text-ink-900 font-bold uppercase">Awaiting Verified Records</div>
+                  <div className="text-ink-900 font-bold uppercase">Publications Archive</div>
                   <p className="font-sans text-stone-500">Peer-reviewed publications will appear here upon authenticated release.</p>
                 </div>
               )}
@@ -267,7 +304,7 @@ export const HomePage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {blogPosts.map((post) => (
+          {recentBlogPosts.map((post) => (
             <Link
               key={post.id}
               to={`/blog/${post.slug}`}
@@ -289,6 +326,11 @@ export const HomePage: React.FC = () => {
               </div>
             </Link>
           ))}
+          {recentBlogPosts.length === 0 && (
+            <div className="col-span-full p-8 text-center rounded-3xl bg-white border border-paper-400 text-xs font-mono text-stone-500">
+              Articles and engineering monographs will appear here.
+            </div>
+          )}
         </div>
       </section>
 

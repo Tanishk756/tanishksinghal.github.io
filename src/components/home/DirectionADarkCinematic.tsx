@@ -2,8 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowUpRight, ArrowRight, MoveRight } from 'lucide-react';
-import { profileData } from '../../generated/profile';
-import { getProductionProjects } from '../../generated/projects';
+import { usePublicContent } from '../../context/PublicContentContext';
 
 // Interactive Kinetic Canvas Centerpiece
 const KineticCanvas: React.FC = () => {
@@ -154,7 +153,8 @@ const KineticCanvas: React.FC = () => {
 };
 
 export const DirectionADarkCinematic: React.FC = () => {
-  const featuredProjects = getProductionProjects().slice(0, 2);
+  const { profile, projects } = usePublicContent();
+  const featuredProjects = projects.slice(0, 2);
 
   return (
     <div className="bg-[#090a0d] text-zinc-100 min-h-screen selection:bg-zinc-100 selection:text-zinc-950 font-sans">
@@ -178,7 +178,7 @@ export const DirectionADarkCinematic: React.FC = () => {
             <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] backdrop-blur-md">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-medium">
-                {profileData.displayName}
+                {profile?.displayName || 'Tanishk Singhal'}
               </span>
               <span className="text-zinc-600">/</span>
               <span className="text-xs font-sans text-zinc-400">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { profileData } from '../generated/profile';
+import { usePublicContent } from '../context/PublicContentContext';
 import { Mail, Github, Linkedin, ArrowUpRight, MapPin, Calendar, Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { cmsApiClient } from '../cms/apiClient';
 
@@ -11,6 +11,13 @@ interface FormErrors {
 }
 
 export const ContactPage: React.FC = () => {
+  const { profile } = usePublicContent();
+  const profileData = profile || {
+    fullName: 'Tanishk Singhal',
+    email: 'Tanishksinghal6285@gmail.com',
+    location: 'India',
+    socials: { github: 'https://github.com/tanishk756', linkedin: 'https://www.linkedin.com/in/tanishk-singhal-/' },
+  };
   const [formData, setFormData] = useState({
     name: '',
     email: '',

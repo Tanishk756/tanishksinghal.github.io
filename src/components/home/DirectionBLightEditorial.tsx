@@ -2,11 +2,14 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowUpRight, MoveRight } from 'lucide-react';
-import { profileData } from '../../generated/profile';
-import { getProductionProjects } from '../../generated/projects';
+import { usePublicContent } from '../../context/PublicContentContext';
 
 export const DirectionBLightEditorial: React.FC = () => {
-  const featuredProjects = getProductionProjects().slice(0, 2);
+  const { profile, projects } = usePublicContent();
+  const displayName = profile?.displayName || profile?.fullName || 'Tanishk Singhal';
+  const headline = profile?.headline || 'Robotics Researcher & Systems Engineer';
+  const shortBio = profile?.shortBio || '';
+  const featuredProjects = projects.slice(0, 2);
 
   return (
     <div className="bg-[#fbfaf7] text-[#141517] min-h-screen selection:bg-zinc-900 selection:text-white font-sans">
@@ -26,22 +29,22 @@ export const DirectionBLightEditorial: React.FC = () => {
             {/* Editorial Eyebrow */}
             <div className="flex items-center gap-3">
               <span className="text-xs font-mono uppercase tracking-widest text-[#73716b] font-medium">
-                EST. {profileData.displayName.toUpperCase()}
-              </span>
-              <span className="text-[#ccc8be] font-mono">/</span>
-              <span className="text-xs font-mono uppercase tracking-widest text-[#73716b]">
-                SYSTEMS & ROBOTICS RESEARCH
+                EST. {displayName.toUpperCase()}
               </span>
             </div>
 
-            {/* Oversized Mixed-Type Headline */}
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-sans font-medium tracking-tight text-[#141517] leading-[1.08]">
-              Building intelligent systems that move from <span className="font-serifDisplay italic text-[#141517] font-normal">research</span> to the <span className="underline decoration-1 underline-offset-8 decoration-[#a8a49a]">physical world.</span>
+            {/* Monumental Headline */}
+            <h1 className="text-5xl sm:text-7xl lg:text-8xl font-display font-extrabold tracking-tight text-[#141517] leading-[0.95]">
+              Autonomous Systems & Kinematics.
             </h1>
 
-            {/* Description */}
-            <p className="text-lg text-[#52504a] max-w-2xl font-sans leading-relaxed font-light">
-              A personal engineering platform exploring autonomous spatial navigation, closed-loop kinematics, ROS 2 multi-agent networks, and predictive machine learning.
+            {/* Editorial Statement */}
+            <p className="text-xl sm:text-2xl text-[#52504b] font-serif leading-relaxed max-w-2xl">
+              "{headline}"
+            </p>
+
+            <p className="text-sm sm:text-base text-[#73716b] font-sans leading-relaxed max-w-xl">
+              {shortBio}
             </p>
 
             {/* Editorial Action Buttons */}
@@ -124,7 +127,7 @@ export const DirectionBLightEditorial: React.FC = () => {
             to="/projects"
             className="inline-flex items-center gap-2 text-sm font-sans font-medium text-[#141517] hover:text-[#52504a] transition-colors"
           >
-            <span>Complete index ({getProductionProjects().length})</span>
+            <span>Complete index ({projects.length})</span>
             <MoveRight className="w-4 h-4" />
           </Link>
         </div>
