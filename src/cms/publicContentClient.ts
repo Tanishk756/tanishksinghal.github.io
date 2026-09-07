@@ -99,7 +99,7 @@ export function normalizeProfile(p: any): Profile | null {
     fullName: p.full_name || p.fullName || 'Tanishk Singhal',
     displayName: p.display_name || p.displayName || 'Tanishk Singhal',
     headline: p.headline || 'Robotics Researcher & Systems Engineer',
-    subheadline: p.subheadline || p.tagline || 'Building autonomous robotic systems, closed-loop ROS 2 control nodes, embedded firmware, and intelligent machine learning pipelines.',
+    subheadline: p.subheadline || p.social_links_json?.subheadline || p.availability_status || p.tagline || 'Building autonomous robotic systems, closed-loop ROS 2 control nodes, embedded firmware, and intelligent machine learning pipelines.',
     shortBio: p.short_bio || p.shortBio || '',
     longBio: longBioArray,
     location: p.location || 'India',

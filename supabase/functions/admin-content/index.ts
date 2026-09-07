@@ -344,7 +344,38 @@ async function handler(req: Request): Promise<Response> {
     });
   }
 
-  function mapToDbColumns(data: Record<string, any>) {
+  function mapProfileToDb(data: Record<string, any>, status: LifecycleState, verificationStatus: string) {
+    const nowIso = new Date().toISOString();
+    return {
+      full_name: data.fullName || data.full_name || 'Tanishk Singhal',
+      display_name: data.displayName || data.display_name || 'Tanishk Singhal',
+      headline: data.headline || '',
+      short_bio: data.shortBio || data.short_bio || '',
+      long_bio: typeof data.longBio === 'string' ? data.longBio : (Array.isArray(data.longBio) ? data.longBio.join('\n\n') : (data.long_bio || '')),
+      location: data.location || 'India',
+      email: data.email || 'tanishksinghal6285@gmail.com',
+      phone: data.phone || null,
+      profile_image_url: data.profileImage || data.profile_image_url || data.avatar_url || data.avatarUrl || 'https://avatars.githubusercontent.com/u/132895444?v=4',
+      resume_url: data.resumeUrl || data.resume_url || '/resume',
+      github_url: data.socials?.github || data.github_url || data.githubUrl || 'https://github.com/tanishk756',
+      linkedin_url: data.socials?.linkedin || data.linkedin_url || data.linkedinUrl || '',
+      google_scholar_url: data.socials?.googleScholar || data.google_scholar_url || data.googleScholarUrl || '',
+      researchgate_url: data.socials?.researchGate || data.researchgate_url || data.researchgateUrl || '',
+      website_url: data.websiteUrl || data.website_url || 'https://tanishksinghal.in',
+      availability_status: data.subheadline || data.availability_status || data.availabilityStatus || 'Available for Research & Engineering Roles',
+      social_links_json: {
+        subheadline: data.subheadline || '',
+        orcid: data.socials?.orcid || '',
+        twitter: data.socials?.twitter || '',
+      },
+      publication_status: status,
+      verification_status: verificationStatus,
+      last_verified: data.lastVerified || data.last_verified || nowIso,
+      updated_at: nowIso,
+    };
+  }
+
+  function mapToDbColumns(data: Record<string, any>, targetTable: string) {
     const dbItem: Record<string, any> = {};
     const fieldMap: Record<string, string> = {
       fullName: 'full_name',
@@ -352,7 +383,8 @@ async function handler(req: Request): Promise<Response> {
       shortBio: 'short_bio',
       longBio: 'long_bio',
       avatarUrl: 'avatar_url',
-      profileImageUrl: 'avatar_url',
+      profileImageUrl: 'profile_image_url',
+      profileImage: 'profile_image_url',
       resumeUrl: 'resume_url',
       githubUrl: 'github_url',
       linkedinUrl: 'linkedin_url',
@@ -375,16 +407,33 @@ async function handler(req: Request): Promise<Response> {
       readingTimeMinutes: 'reading_time_minutes',
       seoTitle: 'seo_title',
       seoDescription: 'seo_description',
-      pdfUrl: 'pdf_url',
+      pdfUrl: 'pdf_asset_url',
+      pdfAssetUrl: 'pdf_asset_url',
       externalUrl: 'doi_url',
+      doiUrl: 'doi_url',
+      scholarUrl: 'scholar_url',
+      researchGateUrl: 'researchgate_url',
       publicationType: 'publication_type',
       officialUrl: 'official_url',
       credentialUrl: 'credential_url',
       evidenceUrl: 'evidence_url',
+      sourceUrl: 'evidence_url',
+      hardwareSpecs: 'hardware_specs',
+      softwareStack: 'software_stack',
+      firmwareSpecs: 'firmware_specs',
+      mediaGallery: 'media_gallery',
+      futureWork: 'future_work',
+      claimsSummary: 'claims_summary',
+      patentOffice: 'patent_office',
+      filingDate: 'filing_date',
+      issueDate: 'issue_date',
+      patentNumber: 'patent_number',
+      roleTitle: 'role_title',
+      role: targetTable === 'experience' ? 'role_title' : 'role',
     };
 
     for (const [key, value] of Object.entries(data)) {
-      if (['contentType', 'currentStatus', 'targetStatus', 'clientTimestamp', 'serverTimestamp'].includes(key)) {
+      if (['contentType', 'currentStatus', 'targetStatus', 'clientTimestamp', 'serverTimestamp', 'notes', 'source', 'socials'].includes(key)) {
         continue;
       }
       const mappedKey = fieldMap[key] || key;
@@ -422,7 +471,53 @@ async function handler(req: Request): Promise<Response> {
         }, 400);
       }
 
-      const dbPayload = mapToDbColumns(body);
+      // Specific Profile Singleton Handling
+      if (tableName === 'profiles') {
+        const existingProf = await querySupabaseRest('profiles?select=id&limit=1');
+        const dbPayload = mapProfileToDb(body, status, verificationStatus);
+        
+        if (existingProf.ok && existingProf.data && existingProf.data[0]?.id) {
+          const existingId = existingProf.data[0].id;
+          const updateRes = await querySupabaseRest(`profiles?id=eq.${encodeURIComponent(existingId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!updateRes.ok) {
+            console.error(`[DATABASE_ERROR] Profile update failed:`, updateRes.error);
+            return jsonResponse({ success: false, error: `Failed to update profile: ${updateRes.error}` }, 500);
+          }
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=profile id=${existingId} status=${status}`);
+          return jsonResponse({
+            success: true,
+            id: existingId,
+            isNew: false,
+            status,
+            verificationStatus,
+            message: 'Profile updated successfully',
+          }, 200);
+        } else {
+          const insertRes = await querySupabaseRest('profiles', {
+            method: 'POST',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!insertRes.ok) {
+            console.error(`[DATABASE_ERROR] Profile insert failed:`, insertRes.error);
+            return jsonResponse({ success: false, error: `Failed to insert profile: ${insertRes.error}` }, 500);
+          }
+          const insertedId = insertRes.data?.[0]?.id || `profile_${Date.now()}`;
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_CREATED type=profile id=${insertedId} status=${status}`);
+          return jsonResponse({
+            success: true,
+            id: insertedId,
+            isNew: true,
+            status,
+            verificationStatus,
+            message: 'Profile created successfully',
+          }, 201);
+        }
+      }
+
+      const dbPayload = mapToDbColumns(body, tableName);
       dbPayload.publication_status = status;
       dbPayload.verification_status = verificationStatus;
       dbPayload.updated_at = new Date().toISOString();
@@ -432,6 +527,11 @@ async function handler(req: Request): Promise<Response> {
         method: 'POST',
         body: JSON.stringify(dbPayload),
       });
+
+      if (!insertRes.ok) {
+        console.error(`[DATABASE_ERROR] Insert failed for ${tableName}:`, insertRes.error);
+        return jsonResponse({ success: false, error: `Database insert failed: ${insertRes.error}` }, 500);
+      }
 
       const insertedRow = Array.isArray(insertRes.data) ? insertRes.data[0] : insertRes.data;
       const returnedId = insertedRow?.id || body.id || `item_${Date.now()}`;
@@ -466,6 +566,7 @@ async function handler(req: Request): Promise<Response> {
       const body = await req.json();
       const currentStatus: LifecycleState = body.currentStatus || 'draft';
       const targetStatus: LifecycleState = body.targetStatus || body.publicationStatus || currentStatus;
+      const verificationStatus = body.verificationStatus || body.verification_status || 'USER_PROVIDED';
 
       // Disallow direct setting of 'published' status via content CRUD
       if (targetStatus === 'published') {
@@ -481,30 +582,49 @@ async function handler(req: Request): Promise<Response> {
         return jsonResponse({ success: false, error: transitionCheck.reason }, 400);
       }
 
+      // Specific Profile Singleton Handling
+      if (tableName === 'profiles') {
+        const existingProf = await querySupabaseRest('profiles?select=id&limit=1');
+        const targetId = existingProf.data?.[0]?.id || idOrSlug || body.id;
+        const dbPayload = mapProfileToDb(body, targetStatus, verificationStatus);
+        
+        const updateRes = await querySupabaseRest(`profiles?id=eq.${encodeURIComponent(targetId)}`, {
+          method: 'PATCH',
+          body: JSON.stringify(dbPayload),
+        });
+
+        if (!updateRes.ok) {
+          console.error(`[DATABASE_ERROR] Profile update failed:`, updateRes.error);
+          return jsonResponse({ success: false, error: `Failed to update profile: ${updateRes.error}` }, 500);
+        }
+
+        console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=profile id=${targetId} from=${currentStatus} to=${targetStatus}`);
+        return jsonResponse({
+          success: true,
+          id: targetId,
+          status: targetStatus,
+          updatedAt: new Date().toISOString(),
+          versionNumber: (body.versionNumber || 1) + 1,
+          message: `Profile updated and transitioned to ${targetStatus}`,
+        });
+      }
+
       const targetId = idOrSlug || body.id;
-      const dbPayload = mapToDbColumns(body);
+      const dbPayload = mapToDbColumns(body, tableName);
       delete dbPayload.id; // Preserve primary key
       dbPayload.publication_status = targetStatus;
       dbPayload.updated_at = new Date().toISOString();
 
-      let patchEndpoint = tableName;
-      if (tableName === 'profiles') {
-        if (targetId && targetId !== 'profile_01' && targetId !== 'profile') {
-          patchEndpoint += `?id=eq.${encodeURIComponent(targetId)}`;
-        } else {
-          const profRes = await querySupabaseRest('profiles?select=id&limit=1');
-          if (profRes.ok && profRes.data && profRes.data[0]) {
-            patchEndpoint += `?id=eq.${encodeURIComponent(profRes.data[0].id)}`;
-          }
-        }
-      } else if (targetId) {
-        patchEndpoint += `?or=(id.eq.${encodeURIComponent(targetId)},slug.eq.${encodeURIComponent(targetId)})`;
-      }
-
-      await querySupabaseRest(patchEndpoint, {
+      let patchEndpoint = `${tableName}?or=(id.eq.${encodeURIComponent(targetId)},slug.eq.${encodeURIComponent(targetId)})`;
+      const patchRes = await querySupabaseRest(patchEndpoint, {
         method: 'PATCH',
         body: JSON.stringify(dbPayload),
       });
+
+      if (!patchRes.ok) {
+        console.error(`[DATABASE_ERROR] Update failed for ${tableName}:`, patchRes.error);
+        return jsonResponse({ success: false, error: `Database update failed: ${patchRes.error}` }, 500);
+      }
 
       console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=${rawContentType} id=${targetId} from=${currentStatus} to=${targetStatus}`);
       return jsonResponse({
@@ -529,9 +649,14 @@ async function handler(req: Request): Promise<Response> {
     }
 
     const deleteEndpoint = `${tableName}?or=(id.eq.${encodeURIComponent(idOrSlug)},slug.eq.${encodeURIComponent(idOrSlug)})`;
-    await querySupabaseRest(deleteEndpoint, {
+    const deleteRes = await querySupabaseRest(deleteEndpoint, {
       method: 'DELETE',
     });
+
+    if (!deleteRes.ok) {
+      console.error(`[DATABASE_ERROR] Delete failed for ${tableName}:`, deleteRes.error);
+      return jsonResponse({ success: false, error: `Database delete failed: ${deleteRes.error}` }, 500);
+    }
 
     console.log(`[AUDIT] user=${user.email} action=CONTENT_DELETED type=${rawContentType} id=${idOrSlug}`);
     return jsonResponse({

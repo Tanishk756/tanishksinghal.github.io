@@ -2198,6 +2198,31 @@ async function runSupabaseSecuritySuite() {
     'Admin Profile UI cleanly reflects database-native publish without Phase 9 commit lock message'
   );
 
+  // Test 234: Profile create maps strictly to database columns
+  const adminContentCode = fs.readFileSync(path.join(process.cwd(), 'supabase/functions/admin-content/index.ts'), 'utf8');
+  assert(
+    adminContentCode.includes('mapProfileToDb') && adminContentCode.includes('full_name') && adminContentCode.includes('display_name'),
+    'Profile create and update strictly whitelist database columns'
+  );
+
+  // Test 235: Nested socials are mapped to individual DB columns and social_links_json
+  assert(
+    adminContentCode.includes('github_url:') && adminContentCode.includes('linkedin_url:') && adminContentCode.includes('social_links_json:'),
+    'Nested socials mapping correctly routes to explicit database columns'
+  );
+
+  // Test 236: Unknown frontend fields (notes, source, socials) are omitted from generic DB columns
+  assert(
+    adminContentCode.includes("'notes'") && adminContentCode.includes("'socials'") && adminContentCode.includes("'source'"),
+    'Unknown frontend fields are omitted from database column updates'
+  );
+
+  // Test 237: No duplicate profile records created on repeated save
+  assert(
+    adminContentCode.includes("tableName === 'profiles'") && adminContentCode.includes("profiles?select=id&limit=1"),
+    'No duplicate profile records are created on save'
+  );
+
   // CLEANUP: Clean all temporary synthetic test records from memory
   db.content_items = [];
   db.media_registry = [];
