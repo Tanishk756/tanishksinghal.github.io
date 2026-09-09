@@ -664,7 +664,6 @@ async function handler(req: Request): Promise<Response> {
       display_order: displayOrder,
       publication_status: status,
       verification_status: verificationStatus,
-      verification_notes: verificationNotes,
       evidence_url: evidenceUrl ? String(evidenceUrl).trim() : null,
       last_verified: data.lastVerified || data.last_verified || nowIso,
       updated_at: nowIso,

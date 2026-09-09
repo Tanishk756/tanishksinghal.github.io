@@ -2946,6 +2946,74 @@ async function runSupabaseSecuritySuite() {
     'ResearchPage renders published research programs from runtime Supabase client'
   );
 
+  // Test 328: normalizeResearch on record without date fields produces undefined dateRange, NEVER inventing '2023' or 'Present'
+  const recordNoDate1 = {
+    id: 'res-kinematics-1',
+    slug: 'closed-loop-kinematic-control',
+    title: 'Closed-Loop Kinematic Control & Heading Tracking',
+    domain: 'Robotics & Autonomous Systems',
+    summary: 'Proportional steering control and quadrant boundary angle normalization.',
+    problem: 'Heading tracking under non-holonomic constraints.',
+    methodology: 'Implemented heading error calculations and quadrant normalization in ROS 2.',
+    publication_status: 'published',
+    verification_status: 'USER_PROVIDED',
+  };
+  const normNoDate1 = normalizeResearch(recordNoDate1);
+  assert(
+    normNoDate1.title === 'Closed-Loop Kinematic Control & Heading Tracking' &&
+    normNoDate1.domain === 'Robotics & Autonomous Systems' &&
+    normNoDate1.dateRange === undefined,
+    'normalizeResearch does not invent dates for "Closed-Loop Kinematic Control & Heading Tracking"'
+  );
+
+  // Test 329: Rendered public metadata for research item without date does NOT contain "2023", "Present", or "2023 — Present"
+  const renderMetaText = (prog: any) => `${prog.domain} ${prog.dateRange ? `· ${prog.dateRange}` : ''}`.trim();
+  const renderedOutput1 = renderMetaText(normNoDate1);
+  assert(
+    renderedOutput1 === 'Robotics & Autonomous Systems' &&
+    !renderedOutput1.includes('2023') &&
+    !renderedOutput1.includes('Present') &&
+    !renderedOutput1.includes('·'),
+    'Rendered metadata segment contains ONLY domain without fabricated date or separator dot'
+  );
+
+  // Test 330: Second research program fixture with different title and no date also contains zero fabricated dates
+  const recordNoDate2 = {
+    id: 'res-multi-agent-2',
+    slug: 'distributed-pursuit-evasion',
+    title: 'Distributed Multi-Agent Pursuit-Evasion Dynamics',
+    domain: 'Robotics & Autonomous Systems',
+    summary: 'Decentralized pursuit algorithms under bounded acceleration.',
+    problem: 'Multi-agent coordination with limited sensor horizon.',
+    methodology: 'Voronoi tessellation with dynamic game formulation.',
+    publication_status: 'published',
+    verification_status: 'USER_PROVIDED',
+  };
+  const normNoDate2 = normalizeResearch(recordNoDate2);
+  const renderedOutput2 = renderMetaText(normNoDate2);
+  assert(
+    normNoDate2.dateRange === undefined &&
+    renderedOutput2 === 'Robotics & Autonomous Systems' &&
+    !renderedOutput2.includes('2023') &&
+    !renderedOutput2.includes('Present') &&
+    !renderedOutput2.includes('—') &&
+    !renderedOutput2.includes('-'),
+    'Second fixture without date renders solely domain without date inference or fabrication'
+  );
+
+  // Test 331: Only explicit date values provided in data record are displayed
+  const recordWithExplicitDate = {
+    ...recordNoDate1,
+    date_range: '2025 — 2026',
+  };
+  const normExplicitDate = normalizeResearch(recordWithExplicitDate);
+  const renderedExplicit = renderMetaText(normExplicitDate);
+  assert(
+    normExplicitDate.dateRange === '2025 — 2026' &&
+    renderedExplicit === 'Robotics & Autonomous Systems · 2025 — 2026',
+    'Explicit date data in record is preserved and displayed accurately with separator'
+  );
+
   // CLEANUP: Clean all temporary synthetic test records from memory
   db.content_items = [];
   db.media_registry = [];

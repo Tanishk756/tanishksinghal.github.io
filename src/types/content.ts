@@ -166,7 +166,7 @@ export interface ResearchItem extends ProvenanceRecord {
   domain: string;
   organization: string;
   collaborators: string[];
-  dateRange: string;
+  dateRange?: string;
   summary: string;
   methodology: string;
   contributions: string[];

@@ -200,7 +200,7 @@ export function normalizeResearch(r: any): ResearchItem {
     domain: r.domain || r.research_area || r.area || 'Robotics & Autonomous Systems',
     organization: r.organization || 'Autonomous Systems Research',
     collaborators: normalizeStringArray(r.collaborators),
-    dateRange: r.date_range || '2023 — Present',
+    dateRange: r.date_range || r.dateRange || undefined,
     summary: r.summary || r.title || '',
     methodology: r.methodology || r.approach || 'Empirical formulation and simulation evaluation.',
     contributions: normalizeStringArray(r.key_contribution || r.contribution || r.contributions || (r.title ? [r.title] : [])),
