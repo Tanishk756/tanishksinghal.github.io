@@ -27,6 +27,7 @@ import { getCorsHeaders, handleCorsPreflight } from '../functions/_shared/cors';
 import { checkRateLimit } from '../functions/_shared/rateLimit';
 import { GitHubPublisherService } from '../functions/_shared/githubPublisher';
 import { buildNotificationEmail, sendContactNotificationEmail, escapeHtml } from '../functions/_shared/emailNotifier';
+import { parseExperienceDate, compareExperiencesDesc, sortExperiencesDesc } from '../../src/utils/experienceSorting';
 
 // Helper to create test mock JWT tokens
 function createTestJwt(email: string, expiresInSec = 3600): string {
@@ -2393,6 +2394,161 @@ async function runSupabaseSecuritySuite() {
     adminExpUiCode.includes('{exp.location}{exp.workMode ?') &&
     adminExpUiCode.includes("'On-site'"),
     'AdminExperiencePage displays location and workMode badge in record list'
+  );
+
+  console.log('\n--- DOMAIN 29: DYNAMIC CHRONOLOGICAL SORTING & DATE NORMALIZATION TESTS ---');
+
+  // Test 278: parseExperienceDate accurately normalizes diverse date representations
+  const p1 = parseExperienceDate('July 2026');
+  const p2 = parseExperienceDate('August 2025');
+  const p3 = parseExperienceDate('April 2025');
+  const p4 = parseExperienceDate('June 2024');
+  const p5 = parseExperienceDate('November 2023');
+  const p6 = parseExperienceDate('August 2023');
+  const pIso = parseExperienceDate('2025-09-15');
+  const pRange = parseExperienceDate('July 2026 — Present');
+
+  assert(
+    p1.isValid && p1.year === 2026 && p1.month === 7 &&
+    p2.isValid && p2.year === 2025 && p2.month === 8 &&
+    p3.isValid && p3.year === 2025 && p3.month === 4 &&
+    p4.isValid && p4.year === 2024 && p4.month === 6 &&
+    p5.isValid && p5.year === 2023 && p5.month === 11 &&
+    p6.isValid && p6.year === 2023 && p6.month === 8 &&
+    pIso.isValid && pIso.year === 2025 && pIso.month === 9 &&
+    pRange.isValid && pRange.year === 2026 && pRange.month === 7,
+    'parseExperienceDate normalizes diverse full/short/ISO/range representations into exact year and month'
+  );
+
+  // Test 279: parseExperienceDate safely handles edge cases without throwing
+  assert(
+    parseExperienceDate('Present').isValid === false &&
+    parseExperienceDate('').isValid === false &&
+    parseExperienceDate(null).isValid === false &&
+    parseExperienceDate(undefined).isValid === false &&
+    parseExperienceDate('Invalid Date Value').isValid === false,
+    'parseExperienceDate rejects "Present", null, undefined, and malformed strings safely'
+  );
+
+  // Test 280: sortExperiencesDesc accurately sequences experiences in Start Date Descending order
+  const rawChronology = [
+    { id: 'exp-nov23', org: 'Nov 2023 Role', startDate: 'November 2023' },
+    { id: 'exp-jul26', org: 'July 2026 Role', startDate: 'July 2026' },
+    { id: 'exp-aug23', org: 'Aug 2023 Role', startDate: 'August 2023' },
+    { id: 'exp-jun24', org: 'June 2024 Role', startDate: 'June 2024' },
+    { id: 'exp-aug25', org: 'Aug 2025 Role', startDate: 'August 2025' },
+    { id: 'exp-apr25', org: 'Apr 2025 Role', startDate: 'April 2025' },
+  ];
+  const sortedChronology = sortExperiencesDesc(rawChronology);
+  const expectedChronology = ['July 2026 Role', 'Aug 2025 Role', 'Apr 2025 Role', 'June 2024 Role', 'Nov 2023 Role', 'Aug 2023 Role'];
+  assert(
+    JSON.stringify(sortedChronology.map(e => e.org)) === JSON.stringify(expectedChronology),
+    'sortExperiencesDesc orders canonical experiences strictly by Start Date Descending'
+  );
+
+  // Test 281: sortExperiencesDesc tie-breaker handles equal start dates deterministically
+  const tieBreakers = [
+    { id: 'item-2', org: 'Tie Role 2', startDate: 'August 2023', displayOrder: 2 },
+    { id: 'item-1', org: 'Tie Role 1', startDate: 'August 2023', displayOrder: 1 },
+  ];
+  const sortedTies = sortExperiencesDesc(tieBreakers);
+  assert(
+    sortedTies[0].org === 'Tie Role 1' && sortedTies[1].org === 'Tie Role 2',
+    'sortExperiencesDesc breaks ties on identical start dates deterministically using displayOrder'
+  );
+
+  // Test 282: Adding a newer future experience automatically places it at index 0 (first)
+  const withFutureExp = sortExperiencesDesc([
+    ...rawChronology,
+    { id: 'exp-jan27', org: 'Future 2027 Role', startDate: 'January 2027' },
+  ]);
+  assert(
+    withFutureExp[0].org === 'Future 2027 Role',
+    'Adding future-dated experience dynamically places it at index 0 (first)'
+  );
+
+  // Test 283: Adding an older past experience automatically places it at final index (last)
+  const withPastExp = sortExperiencesDesc([
+    ...rawChronology,
+    { id: 'exp-may20', org: 'Past 2020 Role', startDate: 'May 2020' },
+  ]);
+  assert(
+    withPastExp[withPastExp.length - 1].org === 'Past 2020 Role',
+    'Adding older past-dated experience dynamically places it at final index (last)'
+  );
+
+  // Test 284: Adding an intermediate experience dynamically inserts it in the correct middle slot
+  const withMidExp = sortExperiencesDesc([
+    ...rawChronology,
+    { id: 'exp-sep24', org: 'Sep 2024 Role', startDate: 'September 2024' },
+  ]);
+  const midIdx = withMidExp.findIndex(e => e.org === 'Sep 2024 Role');
+  assert(
+    withMidExp[midIdx - 1].org === 'Apr 2025 Role' && withMidExp[midIdx + 1].org === 'June 2024 Role',
+    'Adding intermediate experience (September 2024) inserts dynamically between April 2025 and June 2024'
+  );
+
+  // Test 285: Editing an existing experience start_date dynamically repositions it
+  const editedChronology = rawChronology.map(e => e.org === 'Aug 2023 Role' ? { ...e, startDate: 'March 2026' } : e);
+  const sortedEditedChronology = sortExperiencesDesc(editedChronology);
+  const newPos = sortedEditedChronology.findIndex(e => e.org === 'Aug 2023 Role');
+  assert(
+    newPos === 1 && sortedEditedChronology[0].org === 'July 2026 Role' && sortedEditedChronology[2].org === 'Aug 2025 Role',
+    'Editing start date (August 2023 -> March 2026) shifts record dynamically to index 1'
+  );
+
+  // Test 286: Deleting an experience preserves strict chronological ordering of remaining items
+  const afterDelete = sortExperiencesDesc(rawChronology.filter(e => e.org !== 'June 2024 Role'));
+  const remainingExpected = ['July 2026 Role', 'Aug 2025 Role', 'Apr 2025 Role', 'Nov 2023 Role', 'Aug 2023 Role'];
+  assert(
+    JSON.stringify(afterDelete.map(e => e.org)) === JSON.stringify(remainingExpected),
+    'Deleting intermediate experience maintains strict chronological sequence among remaining items'
+  );
+
+  // Test 287: Large randomized dataset (30+ records across 10 years) strictly sorted descending
+  const synthMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const synthBatch: any[] = [];
+  for (let y = 2018; y <= 2028; y++) {
+    for (let m = 0; m < 12; m += 3) {
+      synthBatch.push({
+        id: `synth-${y}-${m}`,
+        org: `Corp ${y} ${synthMonths[m]}`,
+        startDate: `${synthMonths[m]} ${y}`,
+      });
+    }
+  }
+  const shuffledSynth = [...synthBatch].sort(() => Math.random() - 0.5);
+  const sortedSynth = sortExperiencesDesc(shuffledSynth);
+  let synthStrict = true;
+  for (let i = 0; i < sortedSynth.length - 1; i++) {
+    const tA = parseExperienceDate(sortedSynth[i].startDate).timestamp;
+    const tB = parseExperienceDate(sortedSynth[i + 1].startDate).timestamp;
+    if (tA < tB) {
+      synthStrict = false;
+      break;
+    }
+  }
+  assert(
+    synthStrict && sortedSynth.length === synthBatch.length,
+    '30+ randomized multi-decade generated records strictly sorted in Start Date Descending order'
+  );
+
+  // Test 288: ExperiencePage and publicContentClient integrate sortExperiencesDesc
+  const expPageSrc = fs.readFileSync(path.join(process.cwd(), 'src/pages/ExperiencePage.tsx'), 'utf8');
+  assert(
+    publicClientSrc.includes('sortExperiencesDesc') &&
+    expPageSrc.includes('sortExperiencesDesc') &&
+    expPageSrc.includes('const experiences = useMemo(() => sortExperiencesDesc'),
+    'ExperiencePage and publicContentClient integrate sortExperiencesDesc for runtime public consumption'
+  );
+
+  // Test 289: ResumePage and compile-publication integrate sortExperiencesDesc
+  const resumePageSrc = fs.readFileSync(path.join(process.cwd(), 'src/pages/ResumePage.tsx'), 'utf8');
+  const compilePubSrc = fs.readFileSync(path.join(process.cwd(), 'scripts/compile-publication.ts'), 'utf8');
+  assert(
+    resumePageSrc.includes('sortExperiencesDesc') &&
+    compilePubSrc.includes('sortExperiencesDesc'),
+    'ResumePage and compiler integrate sortExperiencesDesc'
   );
 
   // CLEANUP: Clean all temporary synthetic test records from memory

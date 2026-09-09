@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { usePublicContent } from '../context/PublicContentContext';
 import { Briefcase, LoaderCircle } from 'lucide-react';
+import { sortExperiencesDesc } from '../utils/experienceSorting';
 
 export const ExperiencePage: React.FC = () => {
-  const { experience: experiences, isLoading, error } = usePublicContent();
+  const { experience: rawExperiences, isLoading, error } = usePublicContent();
+
+  const experiences = useMemo(() => sortExperiencesDesc(rawExperiences), [rawExperiences]);
 
   if (isLoading && experiences.length === 0) {
     return (
@@ -36,8 +39,14 @@ export const ExperiencePage: React.FC = () => {
     return [];
   };
 
-  const industryRoles = experiences.filter(e => ['EMPLOYMENT', 'INTERNSHIP', 'CONTRACT', 'FOUNDER'].includes(e.type));
-  const leadershipRoles = experiences.filter(e => !['EMPLOYMENT', 'INTERNSHIP', 'CONTRACT', 'FOUNDER'].includes(e.type));
+  const industryRoles = useMemo(
+    () => experiences.filter(e => ['EMPLOYMENT', 'INTERNSHIP', 'CONTRACT', 'FOUNDER'].includes(e.type)),
+    [experiences]
+  );
+  const leadershipRoles = useMemo(
+    () => experiences.filter(e => !['EMPLOYMENT', 'INTERNSHIP', 'CONTRACT', 'FOUNDER'].includes(e.type)),
+    [experiences]
+  );
 
   return (
     <div className="pt-24 pb-24 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">

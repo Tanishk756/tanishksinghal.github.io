@@ -26,6 +26,7 @@ import {
   BlogPost,
 } from '../types/content';
 import { SUPABASE_URL } from './supabaseClient';
+import { sortExperiencesDesc } from '../utils/experienceSorting';
 
 export interface PublicDataset {
   profile: Profile | null;
@@ -394,7 +395,7 @@ export const publicContentClient = {
       const parsedDataset: PublicDataset = {
         profile: normalizeProfile(raw.profile),
         projects: (raw.projects || []).map(normalizeProject),
-        experience: (raw.experience || []).map(normalizeExperience),
+        experience: sortExperiencesDesc((raw.experience || []).map(normalizeExperience)),
         research: (raw.research || []).map(normalizeResearch),
         publications: (raw.publications || []).map(normalizePublication),
         patents: (raw.patents || []).map(normalizePatent),

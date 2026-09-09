@@ -1,5 +1,6 @@
 import { ExperienceItem } from '../types/content';
 import { filterProductionVerified } from './provenance';
+import { sortExperiencesDesc } from '../utils/experienceSorting';
 
 export const experienceData: ExperienceItem[] = [
   {
@@ -92,9 +93,9 @@ export const experienceData: ExperienceItem[] = [
 ];
 
 export function getProductionExperience(): ExperienceItem[] {
-  return filterProductionVerified(experienceData);
+  return sortExperiencesDesc(filterProductionVerified(experienceData));
 }
 
 export function getAllCandidateExperience(): ExperienceItem[] {
-  return experienceData;
+  return sortExperiencesDesc(experienceData);
 }

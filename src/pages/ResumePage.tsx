@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { usePublicContent } from '../context/PublicContentContext';
 import { Printer, LoaderCircle } from 'lucide-react';
+import { sortExperiencesDesc } from '../utils/experienceSorting';
 
 export const ResumePage: React.FC = () => {
-  const { profile, experience: experiences, skills, projects, education, isLoading, error } = usePublicContent();
+  const { profile, experience: rawExperiences, skills, projects, education, isLoading, error } = usePublicContent();
+
+  const experiences = useMemo(() => sortExperiencesDesc(rawExperiences), [rawExperiences]);
 
   const handlePrint = () => {
     window.print();

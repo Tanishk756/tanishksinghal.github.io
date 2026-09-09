@@ -5,6 +5,7 @@ import { ExperienceData } from '../../cms/store';
 import { ExperienceSchema } from '../../cms/schemas';
 import { TextInput, TextareaInput, ArrayInput, SelectInput } from '../../components/admin/FormFields';
 import { Plus, Edit, Trash2, ShieldCheck, CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { sortExperiencesDesc } from '../../utils/experienceSorting';
 
 export const AdminExperiencePage: React.FC = () => {
   const [experiences, setExperiences] = useState<ExperienceData[]>([]);
@@ -49,7 +50,7 @@ export const AdminExperiencePage: React.FC = () => {
           lastVerified: String(e.lastVerified || e.last_verified || new Date().toISOString().split('T')[0]),
           notes: String(e.notes || e.verification_notes || ''),
         }));
-        setExperiences(normalized);
+        setExperiences(sortExperiencesDesc(normalized));
       } else {
         setError(res.error || 'Failed to load experience records from Supabase.');
         setExperiences([]);

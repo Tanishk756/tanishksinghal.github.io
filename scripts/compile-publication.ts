@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { sortExperiencesDesc } from '../src/utils/experienceSorting';
 
 interface PublishedDataset {
   profiles: any[];
@@ -173,7 +174,7 @@ export function getProductionEducation(): EducationItem[] {
 import { ExperienceItem } from '../types/content';
 
 export const experienceData: ExperienceItem[] = ${JSON.stringify(
-  cleanExperience.map(exp => ({
+  sortExperiencesDesc(cleanExperience.map(exp => ({
     id: exp.id,
     slug: (exp.organization || '').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     organization: exp.organization,
@@ -192,7 +193,7 @@ export const experienceData: ExperienceItem[] = ${JSON.stringify(
     verificationStatus: exp.verification_status || 'USER_PROVIDED',
     publicEligibility: true,
     lastVerified: exp.last_verified,
-  })),
+  }))),
   null,
   2
 )};
