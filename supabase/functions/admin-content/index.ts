@@ -301,6 +301,12 @@ async function handler(req: Request): Promise<Response> {
         const rawData = restRes.data;
         const normalizeItem = (item: any) => {
           if (!item || typeof item !== 'object') return item;
+          const statusVal = tableName === 'publications'
+            ? (['published', 'accepted', 'under-review', 'in-preparation'].includes(item.status) ? item.status : (item.publication_status === 'published' ? 'published' : 'under-review'))
+            : (tableName === 'patents'
+              ? (item.status === 'Granted' ? 'granted' : (item.status === 'Published / Pending Examination' ? 'published' : (item.status === 'Under Review' ? 'in-preparation' : (item.status === 'Abandoned' ? 'abandoned' : 'filed'))))
+              : (item.status_label || item.status || 'active'));
+
           return {
             ...item,
             publicationStatus: item.publication_status || item.publicationStatus || 'draft',
@@ -309,9 +315,17 @@ async function handler(req: Request): Promise<Response> {
             sourceUrl: item.evidence_url || item.source_url || item.sourceUrl || '',
             source: item.source || 'USER_PROVIDED',
             domain: item.area || item.domain || '',
-            status: tableName === 'publications'
-              ? (['published', 'accepted', 'under-review', 'in-preparation'].includes(item.status) ? item.status : (item.publication_status === 'published' ? 'published' : 'under-review'))
-              : (item.status_label || item.status || 'active'),
+            status: statusVal,
+            abstract: item.description || item.abstract || '',
+            description: item.description || item.abstract || '',
+            applicationNumber: item.application_number || item.applicationNumber || '',
+            patentNumber: item.patent_number || item.patentNumber || '',
+            filingDate: item.filing_date || item.filingDate || '',
+            publicationDate: item.publication_date || item.publicationDate || '',
+            patentUrl: item.evidence_url || item.registry_url || item.patent_url || item.patentUrl || '',
+            inventors: Array.isArray(item.inventors) ? item.inventors : [],
+            jurisdiction: item.jurisdiction || 'India / International',
+            assignee: item.assignee || '',
             problem: item.research_question || item.problem || '',
             tagline: item.subtitle || item.tagline || '',
             startDate: item.start_date || item.startDate || item.timeframe || '',
@@ -445,9 +459,86 @@ async function handler(req: Request): Promise<Response> {
     };
   }
 
+  function mapPatentToDb(data: Record<string, any>, status: LifecycleState, verificationStatus: string) {
+    const nowIso = new Date().toISOString();
+    const patentStatusMap: Record<string, string> = {
+      granted: 'granted',
+      'granted': 'granted',
+      'Granted': 'granted',
+      filed: 'filed',
+      'filed': 'filed',
+      'Filed': 'filed',
+      published: 'published',
+      'published': 'published',
+      'Published': 'published',
+      'Published / Pending Examination': 'published',
+      provisional: 'provisional',
+      'Provisional': 'provisional',
+      'in-preparation': 'filed',
+      'in preparation': 'filed',
+      'under review': 'filed',
+      'under-review': 'filed',
+      'Under Review': 'filed',
+      abandoned: 'filed',
+      'Abandoned': 'filed',
+      pending: 'pending',
+      'Pending': 'pending',
+    };
+    const rawStatus = String(data.status || 'filed').trim();
+    const mappedStatus = patentStatusMap[rawStatus] || patentStatusMap[rawStatus.toLowerCase()] || 'filed';
+
+    const cleanSlug = data.slug && String(data.slug).trim().length >= 2
+      ? String(data.slug).trim()
+      : (data.title ? String(data.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `patent-${Date.now()}`);
+
+    const cleanInventors = Array.isArray(data.inventors)
+      ? data.inventors.map(String).filter(Boolean)
+      : (typeof data.inventors === 'string' ? data.inventors.split(',').map((s: string) => s.trim()).filter(Boolean) : ['Tanishk Singhal']);
+
+    const applicationNumber = String(
+      data.applicationNumber || data.application_number || data.patentNumber || data.patent_number || data.slug || `APP-${Date.now()}`
+    ).trim();
+
+    const patentNumber = data.patentNumber || data.patent_number || null;
+
+    const filingDate = String(
+      data.filingDate || data.filing_date || nowIso.split('T')[0]
+    ).trim();
+
+    const publicationDate = data.publicationDate || data.publication_date || null;
+
+    const description = String(
+      data.abstract || data.description || 'Patent description and claims disclosure.'
+    ).trim();
+
+    const evidenceUrl = data.evidenceUrl || data.evidence_url || data.registryUrl || data.registry_url || data.patentUrl || data.patent_url || data.externalUrl || data.external_url || null;
+
+    return {
+      slug: cleanSlug,
+      title: String(data.title || 'Untitled Patent Disclosure'),
+      inventors: cleanInventors.length > 0 ? cleanInventors : ['Tanishk Singhal'],
+      application_number: applicationNumber,
+      patent_number: patentNumber ? String(patentNumber).trim() : null,
+      jurisdiction: String(data.jurisdiction || 'India'),
+      filing_date: filingDate,
+      publication_date: publicationDate ? String(publicationDate).trim() : null,
+      status: mappedStatus,
+      assignee: data.assignee ? String(data.assignee).trim() : null,
+      description: description,
+      evidence_url: evidenceUrl ? String(evidenceUrl).trim() : null,
+      display_order: Number(data.displayOrder || data.display_order) || 0,
+      publication_status: status,
+      verification_status: verificationStatus,
+      last_verified: data.lastVerified || data.last_verified || nowIso,
+      updated_at: nowIso,
+    };
+  }
+
   function mapToDbColumns(data: Record<string, any>, targetTable: string) {
     const dbItem: Record<string, any> = {};
     const fieldMap: Record<string, string> = {
+      abstract: 'description',
+      applicationNumber: 'application_number',
       fullName: 'full_name',
       displayName: 'display_name',
       shortBio: 'short_bio',
@@ -652,6 +743,58 @@ async function handler(req: Request): Promise<Response> {
         }
       }
 
+      // Specific Patents Handling
+      if (tableName === 'patents') {
+        const dbPayload = mapPatentToDb(payload, status, verificationStatus);
+        console.log(`[PATENT DEBUG] POST request received for patent: slug=${dbPayload.slug}`);
+
+        const existingPat = dbPayload.slug ? await querySupabaseRest(`patents?slug=eq.${encodeURIComponent(dbPayload.slug)}&limit=1`) : null;
+        if (existingPat && existingPat.ok && existingPat.data && existingPat.data[0]?.id) {
+          const existingId = existingPat.data[0].id;
+          console.log(`[PATENT DEBUG] Existing patent found by slug (${existingId}), performing PATCH update`);
+          const updateRes = await querySupabaseRest(`patents?id=eq.${encodeURIComponent(existingId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!updateRes.ok) {
+            console.error(`[DATABASE_ERROR] Patent update failed:`, updateRes.error);
+            return jsonResponse({ success: false, error: `Failed to update patent: ${updateRes.error}` }, 500);
+          }
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=patent id=${existingId} status=${status}`);
+          return jsonResponse({
+            success: true,
+            id: existingId,
+            isNew: false,
+            status,
+            verificationStatus,
+            message: 'Patent record updated successfully in draft state',
+          }, 200);
+        } else {
+          if (payload.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.id)) {
+            (dbPayload as any).id = payload.id;
+          }
+          const insertRes = await querySupabaseRest('patents', {
+            method: 'POST',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!insertRes.ok) {
+            console.error(`[DATABASE_ERROR] Patent insert failed:`, insertRes.error);
+            return jsonResponse({ success: false, error: `Database insert failed: ${insertRes.error}` }, 500);
+          }
+          const insertedRow = Array.isArray(insertRes.data) ? insertRes.data[0] : insertRes.data;
+          const insertedId = insertedRow?.id || payload.id;
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_CREATED type=patent id=${insertedId} status=${status}`);
+          return jsonResponse({
+            success: true,
+            id: insertedId,
+            isNew: true,
+            status,
+            verificationStatus,
+            message: 'Patent record created successfully in draft state',
+          }, 201);
+        }
+      }
+
       const dbPayload = mapToDbColumns(payload, tableName);
       dbPayload.publication_status = status;
       dbPayload.verification_status = verificationStatus;
@@ -780,6 +923,35 @@ async function handler(req: Request): Promise<Response> {
           message: `Publication record updated and transitioned to ${targetStatus}`,
         });
       }
+
+        // Specific Patents Handling
+        if (tableName === 'patents') {
+          const targetId = idOrSlug || payload.id;
+          const dbPayload = mapPatentToDb(payload, targetStatus, verificationStatus);
+          console.log(`[PATENT DEBUG] PUT request received for patent: targetId=${targetId}`);
+
+          const lookupRes = await querySupabaseRest(`patents?or=(id.eq.${encodeURIComponent(targetId)},slug.eq.${encodeURIComponent(targetId)})&limit=1`);
+          const recordId = lookupRes.ok && lookupRes.data && lookupRes.data[0]?.id ? lookupRes.data[0].id : targetId;
+
+          const updateRes = await querySupabaseRest(`patents?id=eq.${encodeURIComponent(recordId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!updateRes.ok) {
+            console.error(`[DATABASE_ERROR] Patent update failed:`, updateRes.error);
+            return jsonResponse({ success: false, error: `Failed to update patent in database: ${updateRes.error}` }, 500);
+          }
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=patent id=${recordId} from=${currentStatus} to=${targetStatus}`);
+          return jsonResponse({
+            success: true,
+            id: recordId,
+            status: targetStatus,
+            verificationStatus,
+            updatedAt: new Date().toISOString(),
+            versionNumber: (payload.versionNumber || 1) + 1,
+            message: `Patent record updated and transitioned to ${targetStatus}`,
+          });
+        }
 
       const targetId = idOrSlug || payload.id;
       const dbPayload = mapToDbColumns(payload, tableName);

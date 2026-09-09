@@ -2223,6 +2223,58 @@ async function runSupabaseSecuritySuite() {
     'No duplicate profile records are created on save'
   );
 
+  console.log('\n--- DOMAIN 26: PATENTS CMS SCHEMA AND ADAPTER INTEGRATION TESTS ---');
+
+  // Test 238: mapPatentToDb exists and strictly whitelists database columns
+  assert(
+    adminContentCode.includes('function mapPatentToDb') && adminContentCode.includes('description: description'),
+    'frontend abstract maps strictly to DB description'
+  );
+
+  // Test 239: frontend applicationNumber maps to DB application_number
+  assert(
+    adminContentCode.includes('application_number: applicationNumber'),
+    'frontend applicationNumber maps to DB application_number'
+  );
+
+  // Test 240: frontend patentNumber maps to DB patent_number
+  assert(
+    adminContentCode.includes('patent_number: patentNumber'),
+    'frontend patentNumber maps to DB patent_number'
+  );
+
+  // Test 241: patentStatusMap normalizes granted, filed, published to database check constraints
+  assert(
+    adminContentCode.includes('granted:') && adminContentCode.includes('filed:') && adminContentCode.includes('published:'),
+    'patentStatusMap normalizes status values to database check constraints'
+  );
+
+  // Test 242: DB description is mapped to public abstract in normalizePatent
+  const publicClientCode = fs.readFileSync(path.join(process.cwd(), 'src/cms/publicContentClient.ts'), 'utf8');
+  assert(
+    publicClientCode.includes('abstract: pat.description || pat.abstract'),
+    'DB description maps to public abstract in client normalizer'
+  );
+
+  // Test 243: No abstract key is present in DB mapping return object
+  assert(
+    !adminContentCode.includes('return {\n      abstract:') && adminContentCode.includes('description: description'),
+    'No abstract key is emitted in DB payload'
+  );
+
+  // Test 244: Unknown frontend-only columns are not emitted for patents
+  assert(
+    adminContentCode.includes("tableName === 'patents'") && adminContentCode.includes('mapPatentToDb'),
+    'Patents CRUD uses dedicated schema-whitelisted mapper'
+  );
+
+  // Test 245: AdminPatentsPage uses applicationNumber and abstract cleanly
+  const adminPatentUiCode = fs.readFileSync(path.join(process.cwd(), 'src/pages/admin/AdminPatentsPage.tsx'), 'utf8');
+  assert(
+    adminPatentUiCode.includes('editingItem.applicationNumber') && adminPatentUiCode.includes('editingItem.abstract'),
+    'AdminPatentsPage binds applicationNumber and abstract correctly'
+  );
+
   // CLEANUP: Clean all temporary synthetic test records from memory
   db.content_items = [];
   db.media_registry = [];

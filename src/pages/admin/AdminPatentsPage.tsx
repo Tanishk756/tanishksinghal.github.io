@@ -16,6 +16,8 @@ export const AdminPatentsPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+
   useEffect(() => {
     loadPatents();
   }, []);
@@ -26,6 +28,7 @@ export const AdminPatentsPage: React.FC = () => {
     try {
       const res = await cmsApiClient.getContentList<PatentData>('patent');
       if (res.success && Array.isArray(res.data)) {
+        const validStatuses = ['filed', 'granted', 'provisional', 'in-preparation'];
         const normalized = res.data.filter(Boolean).map((p: any) => ({
           ...p,
           id: String(p.id || `pat-${Date.now()}`),
@@ -33,11 +36,12 @@ export const AdminPatentsPage: React.FC = () => {
           title: String(p.title || ''),
           inventors: Array.isArray(p.inventors) ? p.inventors.filter(Boolean).map(String) : ['Tanishk Singhal'],
           jurisdiction: String(p.jurisdiction || 'India / International'),
-          status: (p.status || 'in-preparation') as any,
+          status: (validStatuses.includes(p.status) ? p.status : 'filed') as any,
           publicationStatus: (p.publicationStatus || p.publication_status || 'draft') as any,
-          abstract: String(p.abstract || ''),
-          patentNumber: p.patentNumber || p.patent_number || '',
-          filingDate: p.filingDate || p.filing_date || '',
+          abstract: String(p.abstract || p.description || ''),
+          applicationNumber: String(p.applicationNumber || p.application_number || p.patentNumber || p.patent_number || ''),
+          patentNumber: String(p.patentNumber || p.patent_number || ''),
+          filingDate: String(p.filingDate || p.filing_date || ''),
           source: String(p.source || 'USER_PROVIDED'),
           sourceUrl: String(p.sourceUrl || p.source_url || p.evidence_url || ''),
           verificationStatus: (p.verificationStatus || p.verification_status || 'USER_PROVIDED') as any,
@@ -64,8 +68,11 @@ export const AdminPatentsPage: React.FC = () => {
       slug: '',
       title: '',
       inventors: ['Tanishk Singhal'],
+      applicationNumber: '',
+      patentNumber: '',
+      filingDate: '',
       jurisdiction: 'India / International',
-      status: 'in-preparation',
+      status: 'filed',
       publicationStatus: 'draft',
       abstract: '',
       source: 'USER_PROVIDED',
@@ -76,16 +83,28 @@ export const AdminPatentsPage: React.FC = () => {
     });
   };
 
-  const handleSave = async (item: PatentData) => {
+  const handleSave = async (item: PatentData, targetPublicationStatus: 'draft' | 'approved' = 'draft') => {
     try {
+      const validStatuses = ['filed', 'granted', 'provisional', 'in-preparation'];
+      const rawStatus = item.status as string;
+      const cleanStatus = validStatuses.includes(rawStatus) ? rawStatus : 'filed';
+
       const enriched: PatentData = {
         ...item,
+        status: cleanStatus as any,
         verificationStatus: item.verificationStatus || 'USER_PROVIDED',
         source: item.source || 'USER_PROVIDED',
-        publicationStatus: item.publicationStatus || 'draft',
+        publicationStatus: targetPublicationStatus,
         lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
       };
-      PatentSchema.parse(enriched);
+      
+      const parseResult = PatentSchema.safeParse(enriched);
+      if (!parseResult.success) {
+        console.error('[SAVE_VALIDATION_ERROR]', parseResult.error.issues);
+        setError(`Validation Error: ${parseResult.error.issues[0]?.message || 'Invalid patent data'}`);
+        return;
+      }
+
       setSaving(true);
       const res = isNew
         ? await cmsApiClient.saveContentItem('patent', enriched)
@@ -93,7 +112,7 @@ export const AdminPatentsPage: React.FC = () => {
       setSaving(false);
 
       if (!res.success) {
-        alert(`Failed to save patent: ${res.error || 'Unknown error'}`);
+        setError(`Supabase Error: ${res.error || 'Failed to save patent record.'}`);
         return;
       }
 
@@ -103,9 +122,72 @@ export const AdminPatentsPage: React.FC = () => {
       setNotice('Patent record saved successfully in Supabase.');
       setTimeout(() => setNotice(null), 3000);
     } catch (e: any) {
-      alert(`Validation Error: ${e.errors?.[0]?.message || e.message}`);
+      console.error('[SAVE_EXCEPTION]', e);
+      setError(`Validation Error: ${e.errors?.[0]?.message || e.message}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePublish = async (item: PatentData) => {
+    try {
+      setPublishingId(item.id);
+      const validStatuses = ['filed', 'granted', 'provisional', 'in-preparation'];
+      const rawStatus = item.status as string;
+      const cleanStatus = validStatuses.includes(rawStatus) ? rawStatus : 'granted';
+
+      const enriched: PatentData = {
+        ...item,
+        status: cleanStatus as any,
+        verificationStatus: item.verificationStatus || 'USER_PROVIDED',
+        source: item.source || 'USER_PROVIDED',
+        publicationStatus: 'approved',
+        lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
+      };
+
+      const parseResult = PatentSchema.safeParse(enriched);
+      if (!parseResult.success) {
+        console.error('[PUBLISH_VALIDATION_ERROR]', JSON.stringify(parseResult.error.issues));
+        setError(`Validation Error: ${parseResult.error.issues[0]?.message || 'Invalid patent data'}`);
+        setPublishingId(null);
+        return;
+      }
+
+      // 1. Save pre-publish state as approved
+      const saveRes = isNew
+        ? await cmsApiClient.saveContentItem('patent', enriched)
+        : await cmsApiClient.updateContentItem('patent', item.id, enriched);
+
+      if (!saveRes.success) {
+        setError(`Supabase Error: ${saveRes.error || 'Failed to prepare patent for release.'}`);
+        setPublishingId(null);
+        return;
+      }
+
+      const targetId = saveRes.id || item.id;
+
+      // 2. Trigger publication workflow
+      const pubRes = await cmsApiClient.publishContentItem(
+        'patent',
+        targetId,
+        'approved',
+        enriched.verificationStatus
+      );
+
+      if (!pubRes.success) {
+        setError(`Supabase Publish Error: ${pubRes.error || 'Failed to publish patent.'}`);
+      } else {
+        await loadPatents();
+        setEditingItem(null);
+        setIsNew(false);
+        setNotice(`Patent "${item.title}" successfully published.`);
+        setTimeout(() => setNotice(null), 3500);
+      }
+    } catch (e: any) {
+      console.error('[PUBLISH_EXCEPTION]', e);
+      setError(`Publish Error: ${e.errors?.[0]?.message || e.message}`);
+    } finally {
+      setPublishingId(null);
     }
   };
 
@@ -210,9 +292,9 @@ export const AdminPatentsPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TextInput
                 label="Patent / Application Identifier (if granted/filed)"
-                value={editingItem.patentNumber || ''}
-                onChange={(e) => setEditingItem({ ...editingItem, patentNumber: e.target.value })}
-                placeholder="e.g. 202411000000"
+                value={editingItem.applicationNumber || editingItem.patentNumber || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, applicationNumber: e.target.value, patentNumber: e.target.value })}
+                placeholder="e.g. 202511107435"
               />
               <TextInput
                 label="Filing Date"
@@ -246,12 +328,21 @@ export const AdminPatentsPage: React.FC = () => {
               </button>
               <button
                 type="button"
-                disabled={saving}
-                onClick={() => handleSave(editingItem)}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
+                disabled={saving || !!publishingId}
+                onClick={() => handleSave(editingItem, 'draft')}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                <span>{saving ? 'Saving to Supabase...' : 'Save Entry'}</span>
+                <span>{saving ? 'Saving...' : 'Save Draft'}</span>
+              </button>
+              <button
+                type="button"
+                disabled={saving || !!publishingId}
+                onClick={() => handlePublish(editingItem)}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
+              >
+                {publishingId === editingItem.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>{publishingId === editingItem.id ? 'Publishing...' : 'Publish'}</span>
               </button>
             </div>
           </div>
@@ -292,6 +383,17 @@ export const AdminPatentsPage: React.FC = () => {
                       <ShieldCheck className="w-3 h-3" />
                       <span>{pat.verificationStatus}</span>
                     </span>
+                    {pat.publicationStatus !== 'published' && (
+                      <button
+                        onClick={() => handlePublish(pat)}
+                        disabled={publishingId === pat.id}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-mono font-medium transition-colors disabled:opacity-50 flex items-center gap-1"
+                        title="Publish to public website"
+                      >
+                        {publishingId === pat.id && <Loader2 className="w-3 h-3 animate-spin" />}
+                        <span>Publish</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         setIsNew(false);
