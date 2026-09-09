@@ -3129,6 +3129,54 @@ async function runSupabaseSecuritySuite() {
     'AdminProjectEditorPage contains Software & Tools and all case study technical form fields'
   );
 
+  // Test 337: ProjectSchema and AdminProjectEditorPage handle empty ID and preserve canonical database UUID
+  const newProjWithoutId = {
+    title: 'Robotics Operating Platform (ROP)',
+    slug: 'robotics-operating-platform',
+    tagline: 'Modular middleware orchestrating ROS 2 interface nodes.',
+    category: 'software-tools',
+    subcategories: ['Middleware', 'Robotics'],
+    status: 'in-progress',
+    startDate: '2026',
+    timeframe: '2026',
+    role: 'Lead Systems Engineer',
+    overview: 'High-level engineering overview of ROP.',
+    problem: 'Heterogeneous node telemetry fragmentation.',
+    objective: 'Standardize interface messaging.',
+    architecture: 'Layered publisher-subscriber topology with ROS 2 daemon watchdogs.',
+    technologies: ['ROS 2', 'Python', 'C++'],
+    softwareStack: ['ROS 2', 'Python', 'Middleware'],
+    hardwareStack: ['Jetson Orin Nano'],
+    challenges: 'Bus contention mitigated via QoS deadlines',
+    results: 'Sub-millisecond discovery latency',
+    futureWork: 'DDS discovery optimization',
+    source: 'Tanishk Singhal Portfolio',
+    lastVerified: '2026-09-09',
+    publicationStatus: 'draft',
+    verificationStatus: 'USER_PROVIDED',
+  };
+  const parsedNewProj = ProjectSchema.safeParse(newProjWithoutId);
+  assert(
+    parsedNewProj.success,
+    'ProjectSchema parses new project without requiring a synthetic/temporary frontend ID'
+  );
+
+  // Test 338: AdminProjectEditorPage extracts canonical UUID from API response and updates state before publish
+  assert(
+    editorSrc.includes('const canonicalId = String(res.id || (res.data as any)?.id || dataToSave.id)') ||
+    editorSrc.includes('const canonicalId = String(saveRes.id || (saveRes.data as any)?.id || currentId || dataToSave.id)'),
+    'AdminProjectEditorPage robustly extracts canonical UUID from save response'
+  );
+  assert(
+    editorSrc.includes('setCurrentId(canonicalId)') &&
+    editorSrc.includes("navigate(`/admin/projects/${canonicalId}/edit`, { replace: true })"),
+    'AdminProjectEditorPage updates currentId state and transitions URL to canonical edit route'
+  );
+  assert(
+    !editorSrc.includes("id: `proj-${Date.now()}`"),
+    'AdminProjectEditorPage no longer generates temporary proj-timestamp strings as default IDs'
+  );
+
   // CLEANUP: Clean all temporary synthetic test records from memory
   db.content_items = [];
   db.media_registry = [];

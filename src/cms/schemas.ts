@@ -45,7 +45,7 @@ export const ProfileSchema = ProvenanceSchema.extend({
 
 // 4. Project Schema
 export const ProjectSchema = ProvenanceSchema.extend({
-  id: z.string().min(1, 'ID is required'),
+  id: z.string().optional().or(z.literal('')),
   slug: z.string().min(1, 'Slug is required').regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
   title: z.string().min(1, 'Title is required'),
   tagline: z.string().min(1, 'Tagline is required'),

@@ -13,7 +13,7 @@ import {
 import { Save, ArrowLeft, Eye, CheckCircle2, AlertCircle, Info, Loader2 } from 'lucide-react';
 
 const defaultNewProject: ProjectData = {
-  id: `proj-${Date.now()}`,
+  id: '',
   slug: '',
   title: '',
   tagline: '',
@@ -49,7 +49,8 @@ const defaultNewProject: ProjectData = {
 export const AdminProjectEditorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isNew = !id || id === 'new';
+  const [currentId, setCurrentId] = useState<string | null>(id && id !== 'new' ? id : null);
+  const isNew = !currentId;
 
   const [loading, setLoading] = useState(!isNew);
   const [formData, setFormData] = useState<ProjectData>(defaultNewProject);
@@ -60,19 +61,26 @@ export const AdminProjectEditorPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!isNew && id) {
+    if (id && id !== 'new') {
+      setCurrentId(id);
       loadProject(id);
+    } else {
+      setCurrentId(null);
+      setFormData(defaultNewProject);
+      setLoading(false);
     }
-  }, [id, isNew]);
+  }, [id]);
 
   const loadProject = async (projectId: string) => {
     setLoading(true);
     const res = await cmsApiClient.getContentItem<ProjectData>('project', projectId);
     if (res.success && res.data) {
       const p: any = res.data;
+      const canonicalId = String(p.id || projectId);
+      setCurrentId(canonicalId);
       setFormData({
         ...p,
-        id: String(p.id || projectId),
+        id: canonicalId,
         slug: String(p.slug || ''),
         title: String(p.title || ''),
         tagline: String(p.tagline || p.subtitle || ''),
@@ -104,9 +112,11 @@ export const AdminProjectEditorPage: React.FC = () => {
   };
 
   const handleSave = async (publishState?: 'draft' | 'approved' | 'archived') => {
+    const targetStatus = publishState || (formData.publicationStatus === 'published' ? 'approved' : formData.publicationStatus) || 'draft';
     const dataToSave: ProjectData = {
       ...formData,
-      publicationStatus: publishState || (formData.publicationStatus === 'published' ? 'approved' : formData.publicationStatus) || 'draft',
+      id: currentId || formData.id || '',
+      publicationStatus: targetStatus,
       verificationStatus: formData.verificationStatus || 'USER_PROVIDED',
       source: formData.source || 'USER_PROVIDED',
       lastVerified: formData.lastVerified || new Date().toISOString().split('T')[0],
@@ -130,13 +140,19 @@ export const AdminProjectEditorPage: React.FC = () => {
 
     const res = isNew
       ? await cmsApiClient.saveContentItem('project', dataToSave)
-      : await cmsApiClient.updateContentItem('project', dataToSave.id, dataToSave);
+      : await cmsApiClient.updateContentItem('project', currentId || dataToSave.id || '', dataToSave, targetStatus);
 
     setSaving(false);
 
     if (!res.success) {
       alert(`Failed to save project to Supabase: ${res.error || 'Unknown error'}`);
       return;
+    }
+
+    const canonicalId = String(res.id || (res.data as any)?.id || dataToSave.id);
+    if (canonicalId) {
+      setCurrentId(canonicalId);
+      setFormData((prev) => ({ ...prev, ...dataToSave, id: canonicalId }));
     }
 
     setSavedSuccess(true);
@@ -147,10 +163,15 @@ export const AdminProjectEditorPage: React.FC = () => {
   };
 
   const handlePublishToWebsite = async () => {
-    const dataToSave = {
+    const dataToSave: ProjectData = {
       ...formData,
+      id: currentId || formData.id || '',
       publicationStatus: 'approved' as const,
+      verificationStatus: formData.verificationStatus || 'USER_PROVIDED',
+      source: formData.source || 'USER_PROVIDED',
+      lastVerified: formData.lastVerified || new Date().toISOString().split('T')[0],
     };
+
     const result = ProjectSchema.safeParse(dataToSave);
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
@@ -161,30 +182,47 @@ export const AdminProjectEditorPage: React.FC = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
     setErrors({});
     setPublishing(true);
-    const saveRes = await cmsApiClient.saveContentItem('project', dataToSave);
+
+    const saveRes = isNew
+      ? await cmsApiClient.saveContentItem('project', dataToSave)
+      : await cmsApiClient.updateContentItem('project', currentId || dataToSave.id || '', dataToSave, 'approved');
+
     if (!saveRes.success) {
       setPublishing(false);
       alert(`Failed to save project before publishing: ${saveRes.error}`);
       return;
     }
-    setFormData(dataToSave);
+
+    const canonicalId = String(saveRes.id || (saveRes.data as any)?.id || currentId || dataToSave.id);
+    if (canonicalId) {
+      setCurrentId(canonicalId);
+    }
+    const updatedFormData = {
+      ...dataToSave,
+      id: canonicalId,
+    };
+    setFormData(updatedFormData);
 
     setPublishMessage(null);
     try {
       const pubRes = await cmsApiClient.publishContentItem(
         'project',
-        formData.id,
+        canonicalId,
         'approved',
-        formData.verificationStatus || 'USER_PROVIDED'
+        updatedFormData.verificationStatus || 'USER_PROVIDED'
       );
       setPublishing(false);
       if (!pubRes.success) {
         setPublishMessage(`Unable to publish project: ${pubRes.error || 'Please try again.'}`);
       } else {
         setPublishMessage("Project published successfully.");
-        setFormData((prev) => ({ ...prev, publicationStatus: 'published' }));
+        setFormData((prev) => ({ ...prev, id: canonicalId, publicationStatus: 'published' }));
+        if (isNew && canonicalId) {
+          navigate(`/admin/projects/${canonicalId}/edit`, { replace: true });
+        }
       }
     } catch (e: any) {
       setPublishing(false);

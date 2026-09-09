@@ -25,7 +25,7 @@ export const AdminProjectsPage: React.FC = () => {
       if (res.success && Array.isArray(res.data)) {
         const normalized = res.data.filter(Boolean).map((p: any) => ({
           ...p,
-          id: String(p.id || `proj-${Date.now()}`),
+          id: String(p.id || p.slug || ''),
           slug: String(p.slug || ''),
           title: String(p.title || ''),
           tagline: String(p.tagline || p.subtitle || ''),
@@ -77,7 +77,7 @@ export const AdminProjectsPage: React.FC = () => {
 
   const handleStatusChange = async (project: ProjectData, newStatus: 'draft' | 'published' | 'archived') => {
     const updated = { ...project, publicationStatus: newStatus };
-    const res = await cmsApiClient.updateContentItem('project', project.id, updated);
+    const res = await cmsApiClient.updateContentItem('project', project.id || '', updated);
     if (!res.success) {
       alert(`Failed to update status: ${res.error || 'Unknown error'}`);
     } else {
@@ -232,12 +232,12 @@ export const AdminProjectsPage: React.FC = () => {
                           <Edit className="w-3.5 h-3.5" />
                         </Link>
                         <button
-                          onClick={() => handleDelete(p.id, p.title)}
-                          disabled={deletingId === p.id}
+                          onClick={() => handleDelete(p.id || '', p.title)}
+                          disabled={Boolean(p.id && deletingId === p.id)}
                           className="inline-flex items-center p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 disabled:opacity-50 transition-colors"
                           title="Delete project"
                         >
-                          {deletingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          {p.id && deletingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                         </button>
                       </td>
                     </tr>

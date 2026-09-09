@@ -1183,6 +1183,7 @@ async function handler(req: Request): Promise<Response> {
           return jsonResponse({
             success: true,
             id: existingId,
+            data: { id: existingId },
             isNew: false,
             status,
             verificationStatus,
@@ -1206,6 +1207,7 @@ async function handler(req: Request): Promise<Response> {
           return jsonResponse({
             success: true,
             id: insertedId,
+            data: { id: insertedId },
             isNew: true,
             status,
             verificationStatus,
@@ -1474,6 +1476,7 @@ async function handler(req: Request): Promise<Response> {
           return jsonResponse({
             success: true,
             id: recordId,
+            data: { id: recordId },
             status: targetStatus,
             verificationStatus,
             updatedAt: new Date().toISOString(),
