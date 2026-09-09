@@ -501,9 +501,7 @@ async function handler(req: Request): Promise<Response> {
 
     const patentNumber = data.patentNumber || data.patent_number || null;
 
-    const filingDate = String(
-      data.filingDate || data.filing_date || nowIso.split('T')[0]
-    ).trim();
+    const filingDate = (data.filingDate || data.filing_date) ? String(data.filingDate || data.filing_date).trim() : '';
 
     const publicationDate = data.publicationDate || data.publication_date || null;
 
