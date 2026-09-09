@@ -111,10 +111,16 @@ export const AdminBlogEditorPage: React.FC = () => {
     }
 
     setSavedSuccess(true);
-    setTimeout(() => {
-      setSavedSuccess(false);
-      navigate('/admin/blog');
-    }, 1000);
+    if (isNew && canonicalId) {
+      setTimeout(() => {
+        setSavedSuccess(false);
+        navigate(`/admin/blog/${canonicalId}/edit`, { replace: true });
+      }, 500);
+    } else {
+      setTimeout(() => {
+        setSavedSuccess(false);
+      }, 2000);
+    }
   };
 
   const handlePublishToWebsite = async () => {
