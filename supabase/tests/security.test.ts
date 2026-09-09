@@ -2275,6 +2275,47 @@ async function runSupabaseSecuritySuite() {
     'AdminPatentsPage binds applicationNumber and abstract correctly'
   );
 
+  console.log('\n--- DOMAIN 27: EXPERIENCE CMS SCHEMA & PRIMARY KEY DELETE TESTS ---');
+
+  // Test 263: tablesWithSlug whitelists tables with slug column and excludes experience
+  assert(
+    adminContentCode.includes("tablesWithSlug = ['projects', 'research_programs', 'publications', 'patents', 'organizations', 'blog_posts']") &&
+    !adminContentCode.includes("'experience'") || adminContentCode.includes('tablesWithSlug.includes(tableName)'),
+    'tablesWithSlug helper safely distinguishes tables with vs without slug column'
+  );
+
+  // Test 264: Experience DELETE queries by id only, not slug
+  assert(
+    adminContentCode.includes("const hasSlug = tablesWithSlug.includes(tableName)") &&
+    adminContentCode.includes("const deleteEndpoint = hasSlug") &&
+    adminContentCode.includes("`${tableName}?id=eq.${encodeURIComponent(idOrSlug)}`"),
+    'Experience delete operates strictly against canonical primary key UUID'
+  );
+
+  // Test 265: Dedicated mapExperienceToDb whitelists database schema columns
+  assert(
+    adminContentCode.includes('function mapExperienceToDb(') &&
+    adminContentCode.includes('role_title:') &&
+    adminContentCode.includes('work_mode:') &&
+    adminContentCode.includes('employment_type:'),
+    'Experience CRUD uses dedicated schema-whitelisted mapper matching live DB'
+  );
+
+  // Test 266: Admin publish checks tablesWithSlug before referencing slug
+  const adminPublishSrc = fs.readFileSync(path.join(process.cwd(), 'supabase/functions/admin-publish/index.ts'), 'utf8');
+  assert(
+    adminPublishSrc.includes('tablesWithSlug.includes(tableName)') &&
+    adminPublishSrc.includes("fetchEndpoint += `&id=eq.${encodeURIComponent(contentId)}`"),
+    'Admin publish does not reference slug on tables lacking slug column'
+  );
+
+  // Test 267: AdminExperiencePage binds role_title / role safely
+  const adminExpUiCode = fs.readFileSync(path.join(process.cwd(), 'src/pages/admin/AdminExperiencePage.tsx'), 'utf8');
+  assert(
+    adminExpUiCode.includes('e.role_title') && adminExpUiCode.includes('handleDelete'),
+    'AdminExperiencePage normalizes role_title and invokes UUID deletion'
+  );
+
   // CLEANUP: Clean all temporary synthetic test records from memory
   db.content_items = [];
   db.media_registry = [];

@@ -29,8 +29,8 @@ export const AdminExperiencePage: React.FC = () => {
         const normalized = res.data.filter(Boolean).map((e: any) => ({
           ...e,
           id: String(e.id || `exp-${Date.now()}`),
-          organization: String(e.organization || ''),
-          role: String(e.role || ''),
+          organization: String(e.organization || e.company || ''),
+          role: String(e.role || e.role_title || ''),
           employmentType: String(e.employmentType || e.employment_type || 'Full-time'),
           location: String(e.location || ''),
           startDate: String(e.startDate || e.start_date || new Date().getFullYear().toString()),

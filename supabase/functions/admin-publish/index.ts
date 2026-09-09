@@ -157,11 +157,16 @@ async function handler(req: Request): Promise<Response> {
     }
 
     // 6. Fetch target record from database to verify existence and provenance
+    const tablesWithSlug = ['projects', 'research_programs', 'publications', 'patents', 'organizations', 'blog_posts'];
+    const hasSlug = tablesWithSlug.includes(tableName);
+
     let fetchEndpoint = `${tableName}?select=*`;
     if (tableName === 'profiles') {
       fetchEndpoint += `&limit=1`;
-    } else {
+    } else if (hasSlug) {
       fetchEndpoint += `&or=(id.eq.${encodeURIComponent(contentId)},slug.eq.${encodeURIComponent(contentId)})`;
+    } else {
+      fetchEndpoint += `&id=eq.${encodeURIComponent(contentId)}`;
     }
 
     const fetchRes = await querySupabaseRest(fetchEndpoint);

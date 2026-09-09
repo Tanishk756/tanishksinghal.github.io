@@ -48,6 +48,8 @@ const DOMAIN_TABLE_MAP: Record<string, string> = {
   blog_posts: 'blog_posts',
 };
 
+const tablesWithSlug = ['projects', 'research_programs', 'publications', 'patents', 'organizations', 'blog_posts'];
+
 const ALLOWED_RELATIONSHIP_TYPES: Record<string, string[]> = {
   project: ['research_programs', 'blog_posts', 'publications', 'skills'],
   research_programs: ['projects', 'publications', 'patents'],
@@ -292,9 +294,12 @@ async function handler(req: Request): Promise<Response> {
     }
 
     if (tableName) {
+      const hasSlug = tablesWithSlug.includes(tableName);
       let endpoint = `${tableName}?select=*`;
       if (idOrSlug) {
-        endpoint += `&or=(id.eq.${encodeURIComponent(idOrSlug)},slug.eq.${encodeURIComponent(idOrSlug)})`;
+        endpoint += hasSlug
+          ? `&or=(id.eq.${encodeURIComponent(idOrSlug)},slug.eq.${encodeURIComponent(idOrSlug)})`
+          : `&id=eq.${encodeURIComponent(idOrSlug)}`;
       }
       const restRes = await querySupabaseRest(endpoint);
       if (restRes.ok && restRes.data) {
@@ -528,6 +533,60 @@ async function handler(req: Request): Promise<Response> {
       publication_status: status,
       verification_status: verificationStatus,
       last_verified: data.lastVerified || data.last_verified || nowIso,
+      updated_at: nowIso,
+    };
+  }
+
+  function mapExperienceToDb(data: Record<string, any>, status: LifecycleState, verificationStatus: string) {
+    const nowIso = new Date().toISOString();
+    const cleanResponsibilities = Array.isArray(data.responsibilities)
+      ? data.responsibilities.filter(Boolean).map((r: any) => String(r).trim())
+      : [];
+    const cleanTechnologies = Array.isArray(data.technologies)
+      ? data.technologies.filter(Boolean).map((t: any) => String(t).trim())
+      : (Array.isArray(data.skills) ? data.skills.filter(Boolean).map((s: any) => String(s).trim()) : []);
+
+    const roleTitle = String(data.role_title || data.roleTitle || data.role || data.title || 'Engineering Role').trim();
+    const organization = String(data.organization || data.company || 'Engineering Lab').trim();
+    const location = String(data.location || 'Remote').trim();
+    const startDate = String(data.start_date || data.startDate || '2024').trim();
+    const endDate = (data.end_date || data.endDate) ? String(data.end_date || data.endDate).trim() : null;
+    const isCurrent = Boolean(data.is_current ?? data.isCurrent ?? data.current ?? (!endDate || endDate.toLowerCase() === 'present'));
+    
+    const allowedEmployment = ['Full-time', 'Part-time', 'Contract', 'Internship', 'Research', 'Founder'];
+    const rawEmp = String(data.employment_type || data.employmentType || 'Full-time').trim();
+    const employmentType = allowedEmployment.includes(rawEmp)
+      ? rawEmp
+      : (rawEmp.toLowerCase().includes('research') ? 'Research' : (rawEmp.toLowerCase().includes('intern') ? 'Internship' : (rawEmp.toLowerCase().includes('contract') ? 'Contract' : (rawEmp.toLowerCase().includes('part') ? 'Part-time' : (rawEmp.toLowerCase().includes('founder') ? 'Founder' : 'Full-time')))));
+
+    const rawWorkMode = String(data.work_mode || data.workMode || 'remote').toLowerCase().replace(/[-\s]/g, '_');
+    const workMode = ['remote', 'hybrid', 'on_site'].includes(rawWorkMode)
+      ? rawWorkMode
+      : (rawWorkMode.includes('hybrid') ? 'hybrid' : (rawWorkMode.includes('site') || rawWorkMode.includes('person') ? 'on_site' : 'remote'));
+
+    const description = String(data.description || data.summary || '').trim();
+    const evidenceUrl = (data.evidence_url || data.evidenceUrl || data.source_url || data.sourceUrl) ? String(data.evidence_url || data.evidenceUrl || data.source_url || data.sourceUrl).trim() : null;
+    const displayOrder = Number(data.display_order || data.displayOrder) || 0;
+    const verificationNotes = (data.verification_notes || data.verificationNotes || data.notes) ? String(data.verification_notes || data.verificationNotes || data.notes).trim() : null;
+
+    return {
+      organization,
+      role_title: roleTitle,
+      location,
+      start_date: startDate,
+      end_date: endDate,
+      is_current: isCurrent,
+      employment_type: employmentType,
+      work_mode: workMode,
+      description,
+      responsibilities: cleanResponsibilities,
+      technologies: cleanTechnologies,
+      evidence_url: evidenceUrl,
+      display_order: displayOrder,
+      publication_status: status,
+      verification_status: verificationStatus,
+      verification_notes: verificationNotes,
+      last_verified: data.last_verified || data.lastVerified || nowIso,
       updated_at: nowIso,
     };
   }
@@ -793,6 +852,36 @@ async function handler(req: Request): Promise<Response> {
         }
       }
 
+      // Specific Experience Handling
+      if (tableName === 'experience') {
+        const dbPayload = mapExperienceToDb(payload, status, verificationStatus);
+        console.log(`[EXPERIENCE DEBUG] POST request received for experience: role_title=${dbPayload.role_title} org=${dbPayload.organization}`);
+
+        if (payload.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.id)) {
+          (dbPayload as any).id = payload.id;
+        }
+
+        const insertRes = await querySupabaseRest('experience', {
+          method: 'POST',
+          body: JSON.stringify(dbPayload),
+        });
+        if (!insertRes.ok) {
+          console.error(`[DATABASE_ERROR] Experience insert failed:`, insertRes.error);
+          return jsonResponse({ success: false, error: `Database insert failed: ${insertRes.error}` }, 500);
+        }
+        const insertedRow = Array.isArray(insertRes.data) ? insertRes.data[0] : insertRes.data;
+        const insertedId = insertedRow?.id || payload.id;
+        console.log(`[AUDIT] user=${user.email} action=CONTENT_CREATED type=experience id=${insertedId} status=${status}`);
+        return jsonResponse({
+          success: true,
+          id: insertedId,
+          isNew: true,
+          status,
+          verificationStatus,
+          message: 'Experience record created successfully in draft state',
+        }, 201);
+      }
+
       const dbPayload = mapToDbColumns(payload, tableName);
       dbPayload.publication_status = status;
       dbPayload.verification_status = verificationStatus;
@@ -951,13 +1040,42 @@ async function handler(req: Request): Promise<Response> {
           });
         }
 
+        // Specific Experience Handling
+        if (tableName === 'experience') {
+          const targetId = idOrSlug || payload.id;
+          const dbPayload = mapExperienceToDb(payload, targetStatus, verificationStatus);
+          console.log(`[EXPERIENCE DEBUG] PUT request received for experience: targetId=${targetId}`);
+
+          const updateRes = await querySupabaseRest(`experience?id=eq.${encodeURIComponent(targetId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!updateRes.ok) {
+            console.error(`[DATABASE_ERROR] Experience update failed:`, updateRes.error);
+            return jsonResponse({ success: false, error: `Failed to update experience in database: ${updateRes.error}` }, 500);
+          }
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=experience id=${targetId} from=${currentStatus} to=${targetStatus}`);
+          return jsonResponse({
+            success: true,
+            id: targetId,
+            status: targetStatus,
+            verificationStatus,
+            updatedAt: new Date().toISOString(),
+            versionNumber: (payload.versionNumber || 1) + 1,
+            message: `Experience record updated and transitioned to ${targetStatus}`,
+          });
+        }
+
       const targetId = idOrSlug || payload.id;
       const dbPayload = mapToDbColumns(payload, tableName);
       delete dbPayload.id; // Preserve primary key
       dbPayload.publication_status = targetStatus;
       dbPayload.updated_at = new Date().toISOString();
 
-      let patchEndpoint = `${tableName}?or=(id.eq.${encodeURIComponent(targetId)},slug.eq.${encodeURIComponent(targetId)})`;
+      const hasSlug = tablesWithSlug.includes(tableName);
+      let patchEndpoint = hasSlug
+        ? `${tableName}?or=(id.eq.${encodeURIComponent(targetId)},slug.eq.${encodeURIComponent(targetId)})`
+        : `${tableName}?id=eq.${encodeURIComponent(targetId)}`;
       const patchRes = await querySupabaseRest(patchEndpoint, {
         method: 'PATCH',
         body: JSON.stringify(dbPayload),
@@ -990,7 +1108,10 @@ async function handler(req: Request): Promise<Response> {
       return jsonResponse({ success: false, error: 'Content ID and valid table required for deletion' }, 400);
     }
 
-    const deleteEndpoint = `${tableName}?or=(id.eq.${encodeURIComponent(idOrSlug)},slug.eq.${encodeURIComponent(idOrSlug)})`;
+    const hasSlug = tablesWithSlug.includes(tableName);
+    const deleteEndpoint = hasSlug
+      ? `${tableName}?or=(id.eq.${encodeURIComponent(idOrSlug)},slug.eq.${encodeURIComponent(idOrSlug)})`
+      : `${tableName}?id=eq.${encodeURIComponent(idOrSlug)}`;
     const deleteRes = await querySupabaseRest(deleteEndpoint, {
       method: 'DELETE',
     });
