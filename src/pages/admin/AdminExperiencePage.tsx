@@ -14,6 +14,7 @@ export const AdminExperiencePage: React.FC = () => {
   const [isNew, setIsNew] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -35,7 +36,7 @@ export const AdminExperiencePage: React.FC = () => {
           location: String(e.location || ''),
           startDate: String(e.startDate || e.start_date || new Date().getFullYear().toString()),
           endDate: e.endDate || e.end_date ? String(e.endDate || e.end_date) : undefined,
-          current: Boolean(e.current || e.is_current),
+          current: Boolean(e.current ?? e.is_current),
           description: String(e.description || e.summary || ''),
           responsibilities: Array.isArray(e.responsibilities) ? e.responsibilities.filter(Boolean).map(String) : [],
           achievements: Array.isArray(e.achievements) ? e.achievements.filter(Boolean).map(String) : [],
@@ -83,37 +84,108 @@ export const AdminExperiencePage: React.FC = () => {
     });
   };
 
-  const handleSave = async (item: ExperienceData) => {
+  const handleSave = async (item: ExperienceData, targetStatus: 'draft' | 'approved' = 'draft') => {
     try {
       const enriched: ExperienceData = {
         ...item,
         verificationStatus: item.verificationStatus || 'USER_PROVIDED',
         source: item.source || 'USER_PROVIDED',
-        publicationStatus: item.publicationStatus || 'draft',
+        publicationStatus: targetStatus,
         lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
       };
-      ExperienceSchema.parse(enriched);
+
+      const parseResult = ExperienceSchema.safeParse(enriched);
+      if (!parseResult.success) {
+        console.error('[EXPERIENCE_VALIDATION_ERROR]', JSON.stringify(parseResult.error.issues));
+        setError(`Validation Error: ${parseResult.error.issues[0]?.message || 'Invalid experience data'}`);
+        return { success: false, error: 'Validation failed' };
+      }
+
       setSaving(true);
-      
+      setError(null);
+
       const res = isNew
         ? await cmsApiClient.saveContentItem('experience', enriched)
-        : await cmsApiClient.updateContentItem('experience', enriched.id, enriched);
+        : await cmsApiClient.updateContentItem('experience', item.id, enriched);
 
       if (!res.success) {
-        alert(`Supabase Error: ${res.error || 'Failed to save experience record.'}`);
+        setError(`Supabase Error: ${res.error || 'Failed to save experience record.'}`);
         setSaving(false);
+        return { success: false, error: res.error };
+      }
+
+      if (targetStatus === 'draft') {
+        await loadExperiences();
+        setEditingItem(null);
+        setIsNew(false);
+        setNotice('Experience role saved as draft in Supabase.');
+        setTimeout(() => setNotice(null), 3500);
+      }
+
+      return { success: true, id: res.id || item.id };
+    } catch (e: any) {
+      setError(`Save Error: ${e.errors?.[0]?.message || e.message}`);
+      return { success: false, error: e.message };
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePublish = async (item: ExperienceData) => {
+    setPublishingId(item.id);
+    setError(null);
+    try {
+      const enriched: ExperienceData = {
+        ...item,
+        verificationStatus: item.verificationStatus || 'USER_PROVIDED',
+        source: item.source || 'USER_PROVIDED',
+        publicationStatus: 'approved',
+        lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
+      };
+
+      const parseResult = ExperienceSchema.safeParse(enriched);
+      if (!parseResult.success) {
+        console.error('[PUBLISH_VALIDATION_ERROR]', JSON.stringify(parseResult.error.issues));
+        setError(`Validation Error: ${parseResult.error.issues[0]?.message || 'Invalid experience data'}`);
+        setPublishingId(null);
         return;
       }
 
-      await loadExperiences();
-      setEditingItem(null);
-      setIsNew(false);
-      setNotice('Experience role saved successfully in Supabase.');
-      setTimeout(() => setNotice(null), 3000);
+      // 1. Save pre-publish state as approved
+      const saveRes = isNew
+        ? await cmsApiClient.saveContentItem('experience', enriched)
+        : await cmsApiClient.updateContentItem('experience', item.id, enriched);
+
+      if (!saveRes.success) {
+        setError(`Supabase Error: ${saveRes.error || 'Failed to prepare experience for release.'}`);
+        setPublishingId(null);
+        return;
+      }
+
+      const targetId = saveRes.id || item.id;
+
+      // 2. Trigger publication workflow
+      const pubRes = await cmsApiClient.publishContentItem(
+        'experience',
+        targetId,
+        'approved',
+        enriched.verificationStatus
+      );
+
+      if (!pubRes.success) {
+        setError(`Supabase Publish Error: ${pubRes.error || 'Failed to publish experience.'}`);
+      } else {
+        await loadExperiences();
+        setEditingItem(null);
+        setIsNew(false);
+        setNotice(`Experience role "${item.role}" at "${item.organization}" successfully published.`);
+        setTimeout(() => setNotice(null), 3500);
+      }
     } catch (e: any) {
-      alert(`Validation Error: ${e.errors?.[0]?.message || e.message}`);
+      console.error('[PUBLISH_EXCEPTION]', e);
+      setError(`Publish Error: ${e.errors?.[0]?.message || e.message}`);
     } finally {
-      setSaving(false);
+      setPublishingId(null);
     }
   };
 
@@ -255,12 +327,21 @@ export const AdminExperiencePage: React.FC = () => {
               </button>
               <button
                 type="button"
-                disabled={saving}
-                onClick={() => handleSave(editingItem)}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
+                disabled={saving || !!publishingId}
+                onClick={() => handleSave(editingItem, 'draft')}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                <span>{saving ? 'Saving to Supabase...' : 'Save Role'}</span>
+                <span>{saving ? 'Saving...' : 'Save Draft'}</span>
+              </button>
+              <button
+                type="button"
+                disabled={saving || !!publishingId}
+                onClick={() => handlePublish(editingItem)}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
+              >
+                {publishingId === editingItem.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>{publishingId === editingItem.id ? 'Publishing...' : 'Publish'}</span>
               </button>
             </div>
           </div>
@@ -310,6 +391,17 @@ export const AdminExperiencePage: React.FC = () => {
                       <ShieldCheck className="w-3 h-3" />
                       <span>{exp.verificationStatus}</span>
                     </span>
+                    {exp.publicationStatus !== 'published' && (
+                      <button
+                        onClick={() => handlePublish(exp)}
+                        disabled={publishingId === exp.id}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-mono font-medium transition-colors disabled:opacity-50 flex items-center gap-1"
+                        title="Publish to public website"
+                      >
+                        {publishingId === exp.id && <Loader2 className="w-3 h-3 animate-spin" />}
+                        <span>Publish</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         setIsNew(false);

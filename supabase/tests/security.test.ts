@@ -2316,6 +2316,35 @@ async function runSupabaseSecuritySuite() {
     'AdminExperiencePage normalizes role_title and invokes UUID deletion'
   );
 
+  // Test 268: AdminExperiencePage contains explicit Save Draft action
+  assert(
+    adminExpUiCode.includes("handleSave(editingItem, 'draft')") && adminExpUiCode.includes('Save Draft'),
+    'AdminExperiencePage provides explicit Save Draft action'
+  );
+
+  // Test 269: AdminExperiencePage contains explicit Publish action calling publishContentItem
+  assert(
+    adminExpUiCode.includes("handlePublish(editingItem)") &&
+    adminExpUiCode.includes("cmsApiClient.publishContentItem") &&
+    adminExpUiCode.includes("'experience'"),
+    'AdminExperiencePage provides explicit Publish action utilizing admin-publish'
+  );
+
+  // Test 270: AdminExperiencePage manages publishing and saving loading states
+  assert(
+    adminExpUiCode.includes('publishingId') &&
+    adminExpUiCode.includes('Publishing...') &&
+    adminExpUiCode.includes('disabled={saving || !!publishingId}'),
+    'AdminExperiencePage disables buttons and communicates publishing state'
+  );
+
+  // Test 271: AdminExperiencePage card displays draft vs published badges
+  assert(
+    adminExpUiCode.includes("exp.publicationStatus === 'published'") &&
+    adminExpUiCode.includes("exp.publicationStatus || 'draft'"),
+    'AdminExperiencePage cards reflect actual publication status'
+  );
+
   // CLEANUP: Clean all temporary synthetic test records from memory
   db.content_items = [];
   db.media_registry = [];
