@@ -4,6 +4,8 @@ import { usePublicContent } from '../context/PublicContentContext';
 import { Breadcrumbs } from '../components/layout/Breadcrumbs';
 import { ArrowLeft, Clock, Calendar, LoaderCircle } from 'lucide-react';
 
+import { MarkdownRenderer } from '../components/blog/MarkdownRenderer';
+
 export const BlogPostPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { getBlogPostBySlug, isLoading } = usePublicContent();
@@ -84,10 +86,8 @@ export const BlogPostPage: React.FC = () => {
       </div>
 
       {/* Article Markdown Body */}
-      <article className="prose prose-slate max-w-none font-sans text-sm sm:text-base text-ink-800 leading-relaxed space-y-6">
-        <div className="whitespace-pre-wrap leading-relaxed space-y-4">
-          {post.content}
-        </div>
+      <article className="max-w-none">
+        <MarkdownRenderer content={post.content} />
       </article>
 
       {/* Footer */}

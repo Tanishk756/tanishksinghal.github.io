@@ -30,7 +30,10 @@ import { buildNotificationEmail, sendContactNotificationEmail, escapeHtml } from
 import { parseExperienceDate, compareExperiencesDesc, sortExperiencesDesc } from '../../src/utils/experienceSorting';
 import { SKILL_CATEGORIES, isSkillCategory, SKILL_CATEGORY_METADATA } from '../../src/constants/skills';
 import { SkillSchema, ResearchSchema, ProjectSchema, BlogSchema } from '../../src/cms/schemas';
+import React from 'react';
+import ReactDOMServer from 'react-dom/server';
 import { normalizeSkill, normalizeResearch, normalizeProject, normalizeBlogPost } from '../../src/cms/publicContentClient';
+import { MarkdownRenderer } from '../../src/components/blog/MarkdownRenderer';
 
 // Helper to create test mock JWT tokens
 function createTestJwt(email: string, expiresInSec = 3600): string {
@@ -3256,6 +3259,149 @@ async function runSupabaseSecuritySuite() {
     normalizedBlog.tags.includes('Kinematics') &&
     normalizedBlog.content.includes('def solve_ik(pose):'),
     'normalizeBlogPost cleanly maps database record to public BlogPost with markdown and metadata intact'
+  );
+
+  // --- DOMAIN 33: TECHNICAL BLOG MARKDOWN & EDITORIAL TYPOGRAPHY TESTS ---
+  console.log('\n--- DOMAIN 33: TECHNICAL BLOG MARKDOWN & EDITORIAL TYPOGRAPHY TESTS ---');
+
+  const technicalBlogMd = `
+# Engineering Closed-Loop Systems
+Introductory paragraph discussing state estimation and coordinate transforms.
+
+## Mathematical Formulation
+The algorithm computes **rotational velocity** under *asymptotic stability constraints* using \`normalize_angle()\`.
+
+### Perception & Sensor Fusion
+- LiDAR odometry
+- IMU dead reckoning
+- Visual feature matching
+
+1. Initialize Kalman filter
+2. Propagate covariance
+3. Update state estimate
+
+> The interesting engineering problem begins after the first successful detection.
+
+\`\`\`python
+def track_target(state, observation):
+    prediction = state.predict()
+    return state.update(observation)
+\`\`\`
+
+---
+
+Further technical insights available at [Documentation](https://tanishksinghal.in).
+`;
+
+  const renderedBlogHtml = ReactDOMServer.renderToStaticMarkup(
+    React.createElement(MarkdownRenderer, { content: technicalBlogMd })
+  );
+
+  assert(
+    renderedBlogHtml.includes('<h1') && renderedBlogHtml.includes('Engineering Closed-Loop Systems</h1>'),
+    'MarkdownRenderer compiles H1 markdown to styled semantic <h1> heading'
+  );
+
+  assert(
+    renderedBlogHtml.includes('<h2') && renderedBlogHtml.includes('Mathematical Formulation</h2>'),
+    'MarkdownRenderer compiles H2 markdown to styled semantic <h2> heading'
+  );
+
+  assert(
+    renderedBlogHtml.includes('<h3') && renderedBlogHtml.includes('Perception &amp; Sensor Fusion</h3>'),
+    'MarkdownRenderer compiles H3 markdown to styled semantic <h3> heading'
+  );
+
+  assert(
+    renderedBlogHtml.includes('<strong') && renderedBlogHtml.includes('rotational velocity</strong>'),
+    'MarkdownRenderer compiles **bold** markdown to styled <strong> element'
+  );
+
+  assert(
+    renderedBlogHtml.includes('<em') && renderedBlogHtml.includes('asymptotic stability constraints</em>'),
+    'MarkdownRenderer compiles *italic* markdown to styled <em> element'
+  );
+
+  assert(
+    renderedBlogHtml.includes('<code') && renderedBlogHtml.includes('normalize_angle()</code>'),
+    'MarkdownRenderer compiles `inline code` to styled <code> element'
+  );
+
+  assert(
+    renderedBlogHtml.includes('<ul') && renderedBlogHtml.includes('LiDAR odometry</li>'),
+    'MarkdownRenderer compiles unordered lists to styled <ul> and <li> elements'
+  );
+
+  assert(
+    renderedBlogHtml.includes('<ol') && renderedBlogHtml.includes('Initialize Kalman filter</li>'),
+    'MarkdownRenderer compiles ordered lists to styled <ol> and <li> elements'
+  );
+
+  assert(
+    renderedBlogHtml.includes('<blockquote') && renderedBlogHtml.includes('The interesting engineering problem begins after the first successful detection.'),
+    'MarkdownRenderer compiles > blockquotes to editorial styled <blockquote> element'
+  );
+
+  assert(
+    renderedBlogHtml.includes('<pre') && renderedBlogHtml.includes('def track_target(state, observation):'),
+    'MarkdownRenderer compiles fenced code blocks to horizontally-scrollable <pre> element'
+  );
+
+  assert(
+    renderedBlogHtml.includes('<hr'),
+    'MarkdownRenderer compiles --- horizontal rule to styled editorial divider <hr>'
+  );
+
+  assert(
+    renderedBlogHtml.includes('<a') && renderedBlogHtml.includes('href="https://tanishksinghal.in"'),
+    'MarkdownRenderer compiles [text](url) to styled semantic <a> link'
+  );
+
+  // APEX-Track Article Fixture Test
+  const apexFixtureMd = `
+# Building APEX-Track: Engineering a Modular Perception and Persistent Tracking System
+
+I have always found the gap between a computer-vision demo and a dependable autonomous system more interesting than the demo itself.
+
+## The Idea Behind the System
+
+A detector can identify an object, but a persistent autonomous system needs to maintain state over time.
+
+**Detection is not tracking.** APEX-Track is built around that distinction.
+
+> The interesting engineering problem begins after the first successful detection.
+
+### Multi-Model Perception
+
+The system integrates multiple perception backends:
+
+- YOLOv8-seg
+- RT-DETR
+- YOLO11
+
+\`\`\`text
+Detector -> Fusion -> Tracker -> State Estimation
+\`\`\`
+`;
+
+  const renderedApexHtml = ReactDOMServer.renderToStaticMarkup(
+    React.createElement(MarkdownRenderer, { content: apexFixtureMd })
+  );
+
+  assert(
+    renderedApexHtml.includes('<h1') &&
+    renderedApexHtml.includes('Building APEX-Track:') &&
+    renderedApexHtml.includes('<h2') &&
+    renderedApexHtml.includes('The Idea Behind the System</h2>') &&
+    renderedApexHtml.includes('<strong') &&
+    renderedApexHtml.includes('Detection is not tracking.</strong>') &&
+    renderedApexHtml.includes('<blockquote') &&
+    renderedApexHtml.includes('<h3') &&
+    renderedApexHtml.includes('Multi-Model Perception</h3>') &&
+    renderedApexHtml.includes('YOLOv8-seg</li>') &&
+    renderedApexHtml.includes('<pre') &&
+    renderedApexHtml.includes('Detector -&gt; Fusion -&gt; Tracker'),
+    'APEX-Track article renders complete technical hierarchy with headings, bold callouts, blockquotes, lists, and code diagram without raw markdown leakage'
   );
 
   // CLEANUP: Clean all temporary synthetic test records from memory
