@@ -350,6 +350,7 @@ async function handler(req: Request): Promise<Response> {
             technologies: Array.isArray(item.technologies) ? item.technologies : [],
             subcategories: Array.isArray(item.tools) ? item.tools : (Array.isArray(item.subcategories) ? item.subcategories : []),
             skills: Array.isArray(item.skills) ? item.skills : [],
+            workMode: item.work_mode || item.workMode || '',
           };
         };
 
@@ -559,17 +560,20 @@ async function handler(req: Request): Promise<Response> {
       ? rawEmp
       : (rawEmp.toLowerCase().includes('research') ? 'Research' : (rawEmp.toLowerCase().includes('intern') ? 'Internship' : (rawEmp.toLowerCase().includes('contract') ? 'Contract' : (rawEmp.toLowerCase().includes('part') ? 'Part-time' : (rawEmp.toLowerCase().includes('founder') ? 'Founder' : 'Full-time')))));
 
-    const rawWorkMode = String(data.work_mode || data.workMode || 'remote').toLowerCase().replace(/[-\s]/g, '_');
-    const workMode = ['remote', 'hybrid', 'on_site'].includes(rawWorkMode)
+    const rawWorkMode = (data.workMode !== undefined && data.workMode !== null && data.workMode !== '')
+      ? String(data.workMode).toLowerCase().replace(/[-\s]/g, '_')
+      : ((data.work_mode !== undefined && data.work_mode !== null && data.work_mode !== '') ? String(data.work_mode).toLowerCase().replace(/[-\s]/g, '_') : null);
+
+    const workMode = rawWorkMode && ['remote', 'hybrid', 'on_site'].includes(rawWorkMode)
       ? rawWorkMode
-      : (rawWorkMode.includes('hybrid') ? 'hybrid' : (rawWorkMode.includes('site') || rawWorkMode.includes('person') ? 'on_site' : 'remote'));
+      : (rawWorkMode ? (rawWorkMode.includes('hybrid') ? 'hybrid' : (rawWorkMode.includes('site') || rawWorkMode.includes('person') ? 'on_site' : (rawWorkMode.includes('remote') ? 'remote' : null))) : null);
 
     const description = String(data.description || data.summary || '').trim();
     const evidenceUrl = (data.evidence_url || data.evidenceUrl || data.source_url || data.sourceUrl) ? String(data.evidence_url || data.evidenceUrl || data.source_url || data.sourceUrl).trim() : null;
     const displayOrder = Number(data.display_order || data.displayOrder) || 0;
     const verificationNotes = (data.verification_notes || data.verificationNotes || data.notes) ? String(data.verification_notes || data.verificationNotes || data.notes).trim() : null;
 
-    return {
+    const dbRecord: Record<string, any> = {
       organization,
       role_title: roleTitle,
       location,
@@ -577,7 +581,7 @@ async function handler(req: Request): Promise<Response> {
       end_date: endDate,
       is_current: isCurrent,
       employment_type: employmentType,
-      work_mode: workMode,
+      work_mode: workMode ?? null,
       description,
       responsibilities: cleanResponsibilities,
       technologies: cleanTechnologies,
@@ -589,6 +593,8 @@ async function handler(req: Request): Promise<Response> {
       last_verified: data.last_verified || data.lastVerified || nowIso,
       updated_at: nowIso,
     };
+
+    return dbRecord;
   }
 
   function mapToDbColumns(data: Record<string, any>, targetTable: string) {

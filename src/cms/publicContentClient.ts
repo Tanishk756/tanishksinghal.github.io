@@ -158,6 +158,15 @@ export function normalizeProject(p: any): ProjectCaseStudy {
 }
 
 export function normalizeExperience(exp: any): ExperienceItem {
+  const formatWorkMode = (wm: any): string | undefined => {
+    if (!wm) return undefined;
+    const s = String(wm).toLowerCase().replace(/[-\s]/g, '_');
+    if (s === 'on_site' || s === 'onsite') return 'On-site';
+    if (s === 'hybrid') return 'Hybrid';
+    if (s === 'remote') return 'Remote';
+    return undefined;
+  };
+
   return {
     id: exp.id,
     slug: (exp.organization || '').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
@@ -169,7 +178,7 @@ export function normalizeExperience(exp: any): ExperienceItem {
     current: exp.is_current ?? true,
     isCurrent: exp.is_current ?? true,
     location: exp.location || 'India',
-    workMode: exp.work_mode === 'on_site' ? 'On-site' : (exp.work_mode === 'hybrid' ? 'Hybrid' : 'Remote'),
+    workMode: formatWorkMode(exp.work_mode || exp.workMode),
     domain: 'Robotics & AI',
     description: normalizeStringArray(exp.description || exp.responsibilities),
     technologies: normalizeStringArray(exp.technologies),

@@ -184,7 +184,7 @@ export const experienceData: ExperienceItem[] = ${JSON.stringify(
     current: exp.is_current ?? true,
     isCurrent: exp.is_current ?? true,
     location: exp.location || 'India',
-    workMode: exp.work_mode === 'on_site' ? 'On-site' : (exp.work_mode === 'hybrid' ? 'Hybrid' : 'Remote'),
+    workMode: exp.work_mode === 'on_site' ? 'On-site' : (exp.work_mode === 'hybrid' ? 'Hybrid' : (exp.work_mode === 'remote' ? 'Remote' : undefined)),
     domain: 'Robotics & AI',
     description: normalizeStringArray(exp.description),
     technologies: normalizeStringArray(exp.technologies),

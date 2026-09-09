@@ -3,7 +3,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { cmsApiClient } from '../../cms/apiClient';
 import { ExperienceData } from '../../cms/store';
 import { ExperienceSchema } from '../../cms/schemas';
-import { TextInput, TextareaInput, ArrayInput } from '../../components/admin/FormFields';
+import { TextInput, TextareaInput, ArrayInput, SelectInput } from '../../components/admin/FormFields';
 import { Plus, Edit, Trash2, ShieldCheck, CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 export const AdminExperiencePage: React.FC = () => {
@@ -34,6 +34,7 @@ export const AdminExperiencePage: React.FC = () => {
           role: String(e.role || e.role_title || ''),
           employmentType: String(e.employmentType || e.employment_type || 'Full-time'),
           location: String(e.location || ''),
+          workMode: (e.work_mode || e.workMode) ? String(e.work_mode || e.workMode).toLowerCase().replace(/[-\s]/g, '_') : 'on_site',
           startDate: String(e.startDate || e.start_date || new Date().getFullYear().toString()),
           endDate: e.endDate || e.end_date ? String(e.endDate || e.end_date) : undefined,
           current: Boolean(e.current ?? e.is_current),
@@ -69,6 +70,7 @@ export const AdminExperiencePage: React.FC = () => {
       role: '',
       employmentType: 'Full-time / Research',
       location: '',
+      workMode: 'on_site',
       startDate: new Date().getFullYear().toString(),
       current: false,
       description: '',
@@ -88,6 +90,7 @@ export const AdminExperiencePage: React.FC = () => {
     try {
       const enriched: ExperienceData = {
         ...item,
+        workMode: item.workMode,
         verificationStatus: item.verificationStatus || 'USER_PROVIDED',
         source: item.source || 'USER_PROVIDED',
         publicationStatus: targetStatus,
@@ -137,6 +140,7 @@ export const AdminExperiencePage: React.FC = () => {
     try {
       const enriched: ExperienceData = {
         ...item,
+        workMode: item.workMode,
         verificationStatus: item.verificationStatus || 'USER_PROVIDED',
         source: item.source || 'USER_PROVIDED',
         publicationStatus: 'approved',
@@ -272,6 +276,17 @@ export const AdminExperiencePage: React.FC = () => {
                 onChange={(e) => setEditingItem({ ...editingItem, location: e.target.value })}
                 required
               />
+              <SelectInput
+                label="Work Mode"
+                value={editingItem.workMode || 'on_site'}
+                onChange={(e) => setEditingItem({ ...editingItem, workMode: e.target.value as any })}
+                options={[
+                  { value: 'on_site', label: 'On-site' },
+                  { value: 'hybrid', label: 'Hybrid' },
+                  { value: 'remote', label: 'Remote' },
+                ]}
+                required
+              />
               <TextInput
                 label="Employment Type"
                 value={editingItem.employmentType}
@@ -378,7 +393,9 @@ export const AdminExperiencePage: React.FC = () => {
                         {exp.publicationStatus || 'draft'}
                       </span>
                     </div>
-                    <div className="text-xs font-mono text-slate-500">{exp.organization} · {exp.startDate} – {exp.endDate || 'Present'}</div>
+                    <div className="text-xs font-mono text-slate-500">
+                      {exp.organization} · {exp.location}{exp.workMode ? ` · ${exp.workMode === 'on_site' ? 'On-site' : (exp.workMode === 'hybrid' ? 'Hybrid' : (exp.workMode === 'remote' ? 'Remote' : exp.workMode))}` : ''} · {exp.startDate} – {exp.endDate || 'Present'}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span

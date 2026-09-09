@@ -2345,6 +2345,56 @@ async function runSupabaseSecuritySuite() {
     'AdminExperiencePage cards reflect actual publication status'
   );
 
+  console.log('\n--- DOMAIN 28: EXPERIENCE WORK MODE SCHEMA & PRESENTATION TESTS ---');
+
+  // Test 272: ExperienceSchema validates workMode
+  const schemasSrc = fs.readFileSync(path.join(process.cwd(), 'src/cms/schemas.ts'), 'utf8');
+  assert(
+    schemasSrc.includes("workMode: z.enum(['on_site', 'hybrid', 'remote'])"),
+    'ExperienceSchema validates workMode with on_site, hybrid, remote enum'
+  );
+
+  // Test 273: normalizeExperience maps on_site -> On-site, hybrid -> Hybrid, remote -> Remote
+  const publicClientSrc = fs.readFileSync(path.join(process.cwd(), 'src/cms/publicContentClient.ts'), 'utf8');
+  assert(
+    publicClientSrc.includes("formatWorkMode") &&
+    publicClientSrc.includes("'On-site'") &&
+    publicClientSrc.includes("'Hybrid'") &&
+    publicClientSrc.includes("'Remote'"),
+    'normalizeExperience formats on_site to On-site, hybrid to Hybrid, remote to Remote'
+  );
+
+  // Test 274: normalizeExperience does not default missing workMode to Remote
+  assert(
+    !publicClientSrc.includes("exp.work_mode === 'on_site' ? 'On-site' : (exp.work_mode === 'hybrid' ? 'Hybrid' : 'Remote')"),
+    'normalizeExperience strictly avoids defaulting missing or null workMode to Remote'
+  );
+
+  // Test 275: AdminExperiencePage exposes dedicated Work Mode select field
+  assert(
+    adminExpUiCode.includes('SelectInput') &&
+    adminExpUiCode.includes('label="Work Mode"') &&
+    adminExpUiCode.includes("value: 'on_site', label: 'On-site'") &&
+    adminExpUiCode.includes("value: 'hybrid', label: 'Hybrid'") &&
+    adminExpUiCode.includes("value: 'remote', label: 'Remote'"),
+    'AdminExperiencePage exposes explicit Work Mode select field with on_site, hybrid, and remote'
+  );
+
+  // Test 276: mapExperienceToDb prioritizes workMode without inferring from location or employment type
+  assert(
+    adminContentCode.includes('rawWorkMode') &&
+    adminContentCode.includes("work_mode: workMode") &&
+    !adminContentCode.includes("const rawWorkMode = String(data.work_mode || data.workMode || 'remote')"),
+    'mapExperienceToDb maps workMode independently without defaulting to remote or inferring from location/employment'
+  );
+
+  // Test 277: Experience card in AdminExperiencePage displays location and workMode
+  assert(
+    adminExpUiCode.includes('{exp.location}{exp.workMode ?') &&
+    adminExpUiCode.includes("'On-site'"),
+    'AdminExperiencePage displays location and workMode badge in record list'
+  );
+
   // CLEANUP: Clean all temporary synthetic test records from memory
   db.content_items = [];
   db.media_registry = [];
