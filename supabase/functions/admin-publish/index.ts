@@ -160,11 +160,12 @@ async function handler(req: Request): Promise<Response> {
     const tablesWithSlug = ['projects', 'research_programs', 'publications', 'patents', 'organizations', 'blog_posts'];
     const hasSlug = tablesWithSlug.includes(tableName);
 
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(contentId);
     let fetchEndpoint = `${tableName}?select=*`;
     if (tableName === 'profiles') {
       fetchEndpoint += `&limit=1`;
-    } else if (hasSlug) {
-      fetchEndpoint += `&or=(id.eq.${encodeURIComponent(contentId)},slug.eq.${encodeURIComponent(contentId)})`;
+    } else if (hasSlug && !isUuid) {
+      fetchEndpoint += `&slug=eq.${encodeURIComponent(contentId)}`;
     } else {
       fetchEndpoint += `&id=eq.${encodeURIComponent(contentId)}`;
     }

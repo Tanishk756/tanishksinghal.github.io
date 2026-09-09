@@ -150,19 +150,19 @@ export const AdminBlogPage: React.FC = () => {
                         <Eye className="w-3.5 h-3.5" />
                       </Link>
                       <Link
-                        to={`/admin/blog/${post.id}/edit`}
+                        to={`/admin/blog/${post.id || post.slug}/edit`}
                         className="inline-flex items-center p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white"
                         title="Edit"
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </Link>
                       <button
-                        onClick={() => handleDelete(post.id, post.title)}
-                        disabled={deletingId === post.id}
+                        onClick={() => handleDelete(post.id || post.slug || '', post.title)}
+                        disabled={deletingId === (post.id || post.slug)}
                         className="inline-flex items-center p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 disabled:opacity-50"
                         title="Delete"
                       >
-                        {deletingId === post.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        {deletingId === (post.id || post.slug) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                       </button>
                     </td>
                   </tr>

@@ -9,7 +9,7 @@ import { Save, ArrowLeft, Eye, CheckCircle2, AlertCircle, Info, Loader2 } from '
 import { ZodIssue } from 'zod';
 
 const defaultNewPost: BlogData = {
-  id: `blog-${Date.now()}`,
+  id: '',
   slug: '',
   title: '',
   excerpt: '',
@@ -18,7 +18,6 @@ const defaultNewPost: BlogData = {
   readingTimeMinutes: 5,
   category: 'Robotics & Control',
   tags: ['ROS 2', 'C++', 'Kinematics'],
-  featured: false,
   publicationStatus: 'draft',
   source: 'USER_PROVIDED',
   sourceUrl: '',
@@ -30,7 +29,8 @@ const defaultNewPost: BlogData = {
 export const AdminBlogEditorPage: React.FC = () => {
   const { id: postId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isNew = !postId || postId === 'new';
+  const [currentId, setCurrentId] = useState<string | null>(postId && postId !== 'new' ? postId : null);
+  const isNew = !currentId;
 
   const [formData, setFormData] = useState<BlogData>(defaultNewPost);
   const [loading, setLoading] = useState(!isNew);
@@ -42,10 +42,10 @@ export const AdminBlogEditorPage: React.FC = () => {
   const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
-    if (!isNew && postId) {
-      loadPost(postId);
+    if (currentId) {
+      loadPost(currentId);
     }
-  }, [postId, isNew]);
+  }, [currentId]);
 
   const loadPost = async (id: string) => {
     setLoading(true);
@@ -54,6 +54,7 @@ export const AdminBlogEditorPage: React.FC = () => {
       const p = res.data;
       setFormData({
         ...p,
+        id: String(p.id || id),
         tags: Array.isArray(p.tags) ? p.tags : [],
         verificationStatus: p.verificationStatus || 'USER_PROVIDED',
         source: p.source || 'USER_PROVIDED',
@@ -61,16 +62,18 @@ export const AdminBlogEditorPage: React.FC = () => {
         lastVerified: p.lastVerified || new Date().toISOString().split('T')[0],
       });
     } else {
-      alert(`Blog post not found: ${postId}`);
+      alert(`Blog post not found: ${id}`);
       navigate('/admin/blog');
     }
     setLoading(false);
   };
 
   const handleSave = async (publishState?: 'draft' | 'approved' | 'archived') => {
+    const targetStatus = publishState || (formData.publicationStatus === 'published' ? 'approved' : formData.publicationStatus) || 'draft';
     const dataToSave: BlogData = {
       ...formData,
-      publicationStatus: publishState || (formData.publicationStatus === 'published' ? 'approved' : formData.publicationStatus) || 'draft',
+      id: currentId || formData.id || '',
+      publicationStatus: targetStatus,
       verificationStatus: formData.verificationStatus || 'USER_PROVIDED',
       source: formData.source || 'USER_PROVIDED',
       lastVerified: formData.lastVerified || new Date().toISOString().split('T')[0],
@@ -91,12 +94,20 @@ export const AdminBlogEditorPage: React.FC = () => {
 
     setErrors({});
     setSaving(true);
-    const res = await cmsApiClient.saveContentItem('blog', dataToSave);
+    const res = isNew
+      ? await cmsApiClient.saveContentItem('blog', dataToSave)
+      : await cmsApiClient.updateContentItem('blog', currentId || dataToSave.id || '', dataToSave, targetStatus);
     setSaving(false);
 
     if (!res.success) {
       alert(`Failed to save blog post to Supabase: ${res.error || 'Unknown error'}`);
       return;
+    }
+
+    const canonicalId = String(res.id || (res.data as any)?.id || dataToSave.id);
+    if (canonicalId) {
+      setCurrentId(canonicalId);
+      setFormData((prev) => ({ ...prev, ...dataToSave, id: canonicalId }));
     }
 
     setSavedSuccess(true);
@@ -107,9 +118,13 @@ export const AdminBlogEditorPage: React.FC = () => {
   };
 
   const handlePublishToWebsite = async () => {
-    const dataToSave = {
+    const dataToSave: BlogData = {
       ...formData,
+      id: currentId || formData.id || '',
       publicationStatus: 'approved' as const,
+      verificationStatus: formData.verificationStatus || 'USER_PROVIDED',
+      source: formData.source || 'USER_PROVIDED',
+      lastVerified: formData.lastVerified || new Date().toISOString().split('T')[0],
     };
     const result = BlogSchema.safeParse(dataToSave);
     if (!result.success) {
@@ -123,28 +138,43 @@ export const AdminBlogEditorPage: React.FC = () => {
     }
     setErrors({});
     setPublishing(true);
-    const saveRes = await cmsApiClient.saveContentItem('blog', dataToSave);
+    const saveRes = isNew
+      ? await cmsApiClient.saveContentItem('blog', dataToSave)
+      : await cmsApiClient.updateContentItem('blog', currentId || dataToSave.id || '', dataToSave, 'approved');
+
     if (!saveRes.success) {
       setPublishing(false);
       alert(`Failed to save blog post before publishing: ${saveRes.error}`);
       return;
     }
-    setFormData(dataToSave);
+
+    const canonicalId = String(saveRes.id || (saveRes.data as any)?.id || currentId || dataToSave.id);
+    if (canonicalId) {
+      setCurrentId(canonicalId);
+    }
+    const updatedFormData = {
+      ...dataToSave,
+      id: canonicalId,
+    };
+    setFormData(updatedFormData);
 
     setPublishMessage(null);
     try {
       const pubRes = await cmsApiClient.publishContentItem(
         'blog',
-        formData.id,
+        canonicalId,
         'approved',
-        formData.verificationStatus || 'USER_PROVIDED'
+        updatedFormData.verificationStatus || 'USER_PROVIDED'
       );
       setPublishing(false);
       if (!pubRes.success) {
         setPublishMessage(`Unable to publish blog post: ${pubRes.error || 'Please try again.'}`);
       } else {
         setPublishMessage("Blog post published successfully.");
-        setFormData((prev) => ({ ...prev, publicationStatus: 'published' }));
+        setFormData((prev) => ({ ...prev, id: canonicalId, publicationStatus: 'published' }));
+        if (isNew && canonicalId) {
+          navigate(`/admin/blog/${canonicalId}/edit`, { replace: true });
+        }
       }
     } catch (e: any) {
       setPublishing(false);

@@ -297,9 +297,12 @@ async function handler(req: Request): Promise<Response> {
       const hasSlug = tablesWithSlug.includes(tableName);
       let endpoint = `${tableName}?select=*`;
       if (idOrSlug) {
-        endpoint += hasSlug
-          ? `&or=(id.eq.${encodeURIComponent(idOrSlug)},slug.eq.${encodeURIComponent(idOrSlug)})`
-          : `&id=eq.${encodeURIComponent(idOrSlug)}`;
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+        if (hasSlug && !isUuid) {
+          endpoint += `&slug=eq.${encodeURIComponent(idOrSlug)}`;
+        } else {
+          endpoint += `&id=eq.${encodeURIComponent(idOrSlug)}`;
+        }
       }
       const restRes = await querySupabaseRest(endpoint);
       if (restRes.ok && restRes.data) {
@@ -372,6 +375,11 @@ async function handler(req: Request): Promise<Response> {
             skills: Array.isArray(item.skills) ? item.skills : [],
             workMode: item.work_mode || item.workMode || '',
             subdiscipline: item.subdiscipline || item.description || '',
+            content: item.content || item.body || '',
+            publishedDate: item.published_at ? String(item.published_at).split('T')[0] : (item.publishedDate || (item.created_at ? String(item.created_at).split('T')[0] : '')),
+            readingTimeMinutes: item.reading_time_minutes || item.readingTimeMinutes || 5,
+            tags: Array.isArray(item.tags) ? item.tags : [],
+            author: item.author || 'Tanishk Singhal',
           };
         };
 
@@ -784,6 +792,57 @@ async function handler(req: Request): Promise<Response> {
       verification_status: verificationStatus,
       evidence_url: evidenceUrl ? String(evidenceUrl).trim() : null,
       verification_notes: verificationNotes ? String(verificationNotes).trim() : null,
+      last_verified: data.lastVerified || data.last_verified || nowIso,
+      updated_at: nowIso,
+    };
+  }
+
+  function mapBlogToDb(data: Record<string, any>, status: LifecycleState, verificationStatus: string) {
+    const nowIso = new Date().toISOString();
+    const cleanSlug = data.slug && String(data.slug).trim().length >= 2
+      ? String(data.slug).trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '')
+      : (data.title ? String(data.title).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '') : `blog-${Date.now()}`);
+
+    const cleanTitle = String(data.title || 'Untitled Article').trim();
+    const cleanExcerpt = String(data.excerpt || data.summary || '').trim();
+    const cleanContent = String(data.content || data.body || data.markdown || '').trim();
+    const cleanCategory = String(data.category || 'Robotics & Control').trim();
+    const cleanAuthor = String(data.author || 'Tanishk Singhal').trim();
+    const readingTime = Number(data.readingTimeMinutes || data.reading_time_minutes || data.readingTime) || 5;
+
+    const cleanTags = Array.isArray(data.tags)
+      ? data.tags.map(String).filter(Boolean)
+      : (typeof data.tags === 'string' && data.tags.trim() ? data.tags.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
+
+    let publishedAt: string | null = null;
+    const rawDate = data.publishedDate || data.published_at || data.published_date;
+    if (rawDate) {
+      try {
+        publishedAt = new Date(rawDate).toISOString();
+      } catch {
+        publishedAt = nowIso;
+      }
+    }
+
+    const displayOrder = Number(data.displayOrder || data.display_order) || 0;
+    const seoTitle = data.seoTitle || data.seo_title || null;
+    const seoDescription = data.seoDescription || data.seo_description || null;
+
+    return {
+      slug: cleanSlug,
+      title: cleanTitle,
+      excerpt: cleanExcerpt,
+      content: cleanContent,
+      category: cleanCategory,
+      author: cleanAuthor,
+      reading_time_minutes: readingTime,
+      tags: cleanTags,
+      published_at: publishedAt,
+      seo_title: seoTitle ? String(seoTitle).trim() : null,
+      seo_description: seoDescription ? String(seoDescription).trim() : null,
+      display_order: displayOrder,
+      publication_status: status,
+      verification_status: verificationStatus,
       last_verified: data.lastVerified || data.last_verified || nowIso,
       updated_at: nowIso,
     };
@@ -1216,6 +1275,60 @@ async function handler(req: Request): Promise<Response> {
         }
       }
 
+      // Specific Blog Posts Handling
+      if (tableName === 'blog_posts') {
+        const dbPayload = mapBlogToDb(payload, status, verificationStatus);
+        console.log(`[BLOG DEBUG] POST request received for blog post: slug=${dbPayload.slug}`);
+
+        const existingBlog = dbPayload.slug ? await querySupabaseRest(`blog_posts?slug=eq.${encodeURIComponent(dbPayload.slug)}&limit=1`) : null;
+        if (existingBlog && existingBlog.ok && existingBlog.data && existingBlog.data[0]?.id) {
+          const existingId = existingBlog.data[0].id;
+          console.log(`[BLOG DEBUG] Existing blog post found by slug (${existingId}), performing PATCH update`);
+          const updateRes = await querySupabaseRest(`blog_posts?id=eq.${encodeURIComponent(existingId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!updateRes.ok) {
+            console.error(`[DATABASE_ERROR] Blog post update failed:`, updateRes.error);
+            return jsonResponse({ success: false, error: `Failed to update blog post: ${updateRes.error}` }, 500);
+          }
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=blog_posts id=${existingId} status=${status}`);
+          return jsonResponse({
+            success: true,
+            id: existingId,
+            data: { id: existingId },
+            isNew: false,
+            status,
+            verificationStatus,
+            message: 'Blog post updated successfully in draft state',
+          }, 200);
+        } else {
+          if (payload.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.id)) {
+            (dbPayload as any).id = payload.id;
+          }
+          const insertRes = await querySupabaseRest('blog_posts', {
+            method: 'POST',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!insertRes.ok) {
+            console.error(`[DATABASE_ERROR] Blog post insert failed:`, insertRes.error);
+            return jsonResponse({ success: false, error: `Database insert failed: ${insertRes.error}` }, 500);
+          }
+          const insertedRow = Array.isArray(insertRes.data) ? insertRes.data[0] : insertRes.data;
+          const insertedId = insertedRow?.id || payload.id;
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_CREATED type=blog_posts id=${insertedId} status=${status}`);
+          return jsonResponse({
+            success: true,
+            id: insertedId,
+            data: { id: insertedId },
+            isNew: true,
+            status,
+            verificationStatus,
+            message: 'Blog post created successfully in draft state',
+          }, 201);
+        }
+      }
+
       const dbPayload = mapToDbColumns(payload, tableName);
       dbPayload.publication_status = status;
       dbPayload.verification_status = verificationStatus;
@@ -1485,6 +1598,40 @@ async function handler(req: Request): Promise<Response> {
           });
         }
 
+        // Specific Blog Posts Handling
+        if (tableName === 'blog_posts') {
+          const targetId = idOrSlug || payload.id;
+          const dbPayload = mapBlogToDb(payload, targetStatus, verificationStatus);
+          console.log(`[BLOG DEBUG] PUT request received for blog post: targetId=${targetId}`);
+
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
+          const lookupEndpoint = isUuid
+            ? `blog_posts?id=eq.${encodeURIComponent(targetId)}&limit=1`
+            : `blog_posts?slug=eq.${encodeURIComponent(targetId)}&limit=1`;
+          const lookupRes = await querySupabaseRest(lookupEndpoint);
+          const recordId = lookupRes.ok && lookupRes.data && lookupRes.data[0]?.id ? lookupRes.data[0].id : targetId;
+
+          const updateRes = await querySupabaseRest(`blog_posts?id=eq.${encodeURIComponent(recordId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!updateRes.ok) {
+            console.error(`[DATABASE_ERROR] Blog post update failed:`, updateRes.error);
+            return jsonResponse({ success: false, error: `Failed to update blog post in database: ${updateRes.error}` }, 500);
+          }
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=blog_posts id=${recordId} from=${currentStatus} to=${targetStatus}`);
+          return jsonResponse({
+            success: true,
+            id: recordId,
+            data: { id: recordId },
+            status: targetStatus,
+            verificationStatus,
+            updatedAt: new Date().toISOString(),
+            versionNumber: (payload.versionNumber || 1) + 1,
+            message: `Blog post record updated and transitioned to ${targetStatus}`,
+          });
+        }
+
       const targetId = idOrSlug || payload.id;
       const dbPayload = mapToDbColumns(payload, tableName);
       delete dbPayload.id; // Preserve primary key
@@ -1492,8 +1639,9 @@ async function handler(req: Request): Promise<Response> {
       dbPayload.updated_at = new Date().toISOString();
 
       const hasSlug = tablesWithSlug.includes(tableName);
-      let patchEndpoint = hasSlug
-        ? `${tableName}?or=(id.eq.${encodeURIComponent(targetId)},slug.eq.${encodeURIComponent(targetId)})`
+      const isPatchUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
+      let patchEndpoint = (hasSlug && !isPatchUuid)
+        ? `${tableName}?slug=eq.${encodeURIComponent(targetId)}`
         : `${tableName}?id=eq.${encodeURIComponent(targetId)}`;
       const patchRes = await querySupabaseRest(patchEndpoint, {
         method: 'PATCH',
@@ -1528,8 +1676,9 @@ async function handler(req: Request): Promise<Response> {
     }
 
     const hasSlug = tablesWithSlug.includes(tableName);
+    const isDeleteUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
     const deleteEndpoint = hasSlug
-      ? `${tableName}?or=(id.eq.${encodeURIComponent(idOrSlug)},slug.eq.${encodeURIComponent(idOrSlug)})`
+      ? (isDeleteUuid ? `${tableName}?id=eq.${encodeURIComponent(idOrSlug)}` : `${tableName}?slug=eq.${encodeURIComponent(idOrSlug)}`)
       : `${tableName}?id=eq.${encodeURIComponent(idOrSlug)}`;
     const deleteRes = await querySupabaseRest(deleteEndpoint, {
       method: 'DELETE',

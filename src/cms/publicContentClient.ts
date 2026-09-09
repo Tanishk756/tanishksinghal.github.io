@@ -387,7 +387,7 @@ export function normalizeBlogPost(b: any): BlogPost {
     author: b.author || 'Tanishk Singhal',
     publishedDate: b.published_at || b.created_at || '',
     readingTimeMinutes: b.reading_time_minutes || 5,
-    categories: normalizeStringArray(b.categories),
+    categories: b.category ? [b.category] : normalizeStringArray(b.categories),
     tags: normalizeStringArray(b.tags),
     content: b.content || '',
     source: 'Supabase Canonical published record',

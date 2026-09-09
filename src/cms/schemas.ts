@@ -154,8 +154,8 @@ export const PatentSchema = ProvenanceSchema.extend({
 
 // 9. Blog Post Schema
 export const BlogSchema = ProvenanceSchema.extend({
-  id: z.string().min(1, 'ID is required'),
-  slug: z.string().min(1, 'Slug is required'),
+  id: z.string().optional().or(z.literal('')),
+  slug: z.string().min(1, 'Slug is required').regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
   title: z.string().min(1, 'Title is required'),
   excerpt: z.string().min(1, 'Excerpt is required'),
   content: z.string().min(1, 'Content is required'),
@@ -165,7 +165,6 @@ export const BlogSchema = ProvenanceSchema.extend({
   readingTimeMinutes: z.number().int().min(1).default(5),
   category: z.string().min(1, 'Category is required'),
   tags: z.array(z.string()),
-  featured: z.boolean().default(false),
   publicationStatus: PublicationStatusSchema.default('published'),
   relatedProjectIds: z.array(z.string()).optional(),
   relatedResearchIds: z.array(z.string()).optional(),

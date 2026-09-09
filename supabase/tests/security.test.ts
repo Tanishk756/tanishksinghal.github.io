@@ -29,8 +29,8 @@ import { GitHubPublisherService } from '../functions/_shared/githubPublisher';
 import { buildNotificationEmail, sendContactNotificationEmail, escapeHtml } from '../functions/_shared/emailNotifier';
 import { parseExperienceDate, compareExperiencesDesc, sortExperiencesDesc } from '../../src/utils/experienceSorting';
 import { SKILL_CATEGORIES, isSkillCategory, SKILL_CATEGORY_METADATA } from '../../src/constants/skills';
-import { SkillSchema, ResearchSchema, ProjectSchema } from '../../src/cms/schemas';
-import { normalizeSkill, normalizeResearch, normalizeProject } from '../../src/cms/publicContentClient';
+import { SkillSchema, ResearchSchema, ProjectSchema, BlogSchema } from '../../src/cms/schemas';
+import { normalizeSkill, normalizeResearch, normalizeProject, normalizeBlogPost } from '../../src/cms/publicContentClient';
 
 // Helper to create test mock JWT tokens
 function createTestJwt(email: string, expiresInSec = 3600): string {
@@ -3172,9 +3172,90 @@ async function runSupabaseSecuritySuite() {
     editorSrc.includes("navigate(`/admin/projects/${canonicalId}/edit`, { replace: true })"),
     'AdminProjectEditorPage updates currentId state and transitions URL to canonical edit route'
   );
+  // Test 339: BlogSchema parses new blog post without requiring temporary ID or nonexistent featured field
+  const newBlogPayload = {
+    title: 'Kinematic Trajectory Generation for Redundant Manipulators',
+    slug: 'kinematic-trajectory-generation-redundant-manipulators',
+    excerpt: 'Closed-form inverse kinematics and nullspace optimization algorithms in ROS 2.',
+    category: 'Robotics & Control',
+    publishedDate: '2026-09-09',
+    readingTimeMinutes: 7,
+    tags: ['Robotics', 'Kinematics', 'ROS 2', 'Control Systems'],
+    content: '# Kinematic Trajectory Generation\n\n## Overview\nNullspace projection ensures secondary joint limit avoidance.',
+    source: 'Tanishk Singhal Portfolio',
+    lastVerified: '2026-09-09',
+    publicationStatus: 'draft',
+    verificationStatus: 'USER_PROVIDED',
+  };
+  const parsedBlog = BlogSchema.safeParse(newBlogPayload);
   assert(
-    !editorSrc.includes("id: `proj-${Date.now()}`"),
-    'AdminProjectEditorPage no longer generates temporary proj-timestamp strings as default IDs'
+    parsedBlog.success,
+    'BlogSchema parses valid blog post payload without requiring pre-generated ID or featured field'
+  );
+
+  // Test 340: BlogSchema rejects invalid slug formats
+  const invalidBlogSlug = { ...newBlogPayload, slug: 'Invalid Slug With Spaces!' };
+  const parsedInvalidSlug = BlogSchema.safeParse(invalidBlogSlug);
+  assert(
+    !parsedInvalidSlug.success,
+    'BlogSchema rejects slugs containing uppercase characters, spaces, or invalid symbols'
+  );
+
+  // Test 341: AdminBlogEditorPage source does not send featured property and manages canonical UUID
+  const blogEditorSrc = fs.readFileSync(path.join(process.cwd(), 'src/pages/admin/AdminBlogEditorPage.tsx'), 'utf8');
+  assert(
+    !blogEditorSrc.includes('featured: false') &&
+    !blogEditorSrc.includes('featured: true') &&
+    !blogEditorSrc.includes("id: `blog-${Date.now()}`"),
+    'AdminBlogEditorPage no longer generates temporary IDs or includes unsupported featured field'
+  );
+  assert(
+    blogEditorSrc.includes('const canonicalId = String(res.id || (res.data as any)?.id || dataToSave.id)') ||
+    blogEditorSrc.includes('const canonicalId = String(saveRes.id || (saveRes.data as any)?.id || currentId || dataToSave.id)'),
+    'AdminBlogEditorPage extracts canonical UUID from API response'
+  );
+  assert(
+    blogEditorSrc.includes('setCurrentId(canonicalId)') &&
+    blogEditorSrc.includes("navigate(`/admin/blog/${canonicalId}/edit`, { replace: true })"),
+    'AdminBlogEditorPage updates currentId state and transitions URL to canonical edit route'
+  );
+
+  // Test 342: admin-content maps blog posts strictly to existing public.blog_posts table columns
+  const adminContentSrc = fs.readFileSync(path.join(process.cwd(), 'supabase/functions/admin-content/index.ts'), 'utf8');
+  assert(
+    adminContentSrc.includes('function mapBlogToDb(') &&
+    adminContentSrc.includes("tableName === 'blog_posts'") &&
+    !adminContentSrc.includes('featured: data.featured') &&
+    !adminContentSrc.includes('featured: Boolean(data.featured)'),
+    'admin-content contains dedicated mapBlogToDb mapping strictly to blog_posts schema without featured column'
+  );
+
+  // Test 343: normalizeBlogPost cleanly maps database columns to public BlogPost type
+  const dbBlogRow = {
+    id: 'a0000000-0000-0000-0000-000000000001',
+    slug: 'kinematic-trajectory-generation-redundant-manipulators',
+    title: 'Kinematic Trajectory Generation for Redundant Manipulators',
+    excerpt: 'Closed-form inverse kinematics and nullspace optimization algorithms in ROS 2.',
+    content: '# Kinematic Trajectory Generation\n\n```python\ndef solve_ik(pose):\n    pass\n```',
+    category: 'Robotics & Control',
+    author: 'Tanishk Singhal',
+    reading_time_minutes: 7,
+    tags: ['Robotics', 'Kinematics', 'ROS 2'],
+    published_at: '2026-09-09T12:00:00.000Z',
+    publication_status: 'published',
+    verification_status: 'USER_PROVIDED',
+    last_verified: '2026-09-09T12:00:00.000Z',
+  };
+  const normalizedBlog = normalizeBlogPost(dbBlogRow);
+  assert(
+    normalizedBlog.title === 'Kinematic Trajectory Generation for Redundant Manipulators' &&
+    normalizedBlog.slug === 'kinematic-trajectory-generation-redundant-manipulators' &&
+    normalizedBlog.readingTimeMinutes === 7 &&
+    normalizedBlog.categories[0] === 'Robotics & Control' &&
+    normalizedBlog.tags.includes('Robotics') &&
+    normalizedBlog.tags.includes('Kinematics') &&
+    normalizedBlog.content.includes('def solve_ik(pose):'),
+    'normalizeBlogPost cleanly maps database record to public BlogPost with markdown and metadata intact'
   );
 
   // CLEANUP: Clean all temporary synthetic test records from memory
