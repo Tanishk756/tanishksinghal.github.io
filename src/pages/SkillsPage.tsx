@@ -1,19 +1,11 @@
 import React from 'react';
 import { usePublicContent } from '../context/PublicContentContext';
+import { SKILL_CATEGORIES } from '../constants/skills';
 import { LoaderCircle } from 'lucide-react';
 
 export const SkillsPage: React.FC = () => {
   const { skills, isLoading, error } = usePublicContent();
 
-  const categories = [
-    'Robotics & Control',
-    'Autonomous Systems',
-    'AI & ML',
-    'Firmware & Embedded',
-    'Hardware & Circuits',
-    'Space Systems & UAV',
-    'Software & Tools',
-  ] as const;
 
   if (isLoading && skills.length === 0) {
     return (
@@ -53,9 +45,8 @@ export const SkillsPage: React.FC = () => {
 
       {/* Categorized Skills Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {categories.map((cat, idx) => {
+        {SKILL_CATEGORIES.map((cat, idx) => {
           const catSkills = skills.filter((s) => s.category === cat);
-          if (catSkills.length === 0 && skills.length > 0) return null;
 
           return (
             <div
@@ -80,7 +71,9 @@ export const SkillsPage: React.FC = () => {
                     >
                       <div>
                         <span className="font-semibold text-ink-900 block">{s.name}</span>
-                        <span className="text-[11px] font-mono text-stone-500 uppercase">{s.level}</span>
+                        <span className="text-[11px] font-mono text-stone-500">
+                          {s.subdiscipline || (s as any).description || s.level || 'General'}
+                        </span>
                       </div>
                     </div>
                   ))}

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SKILL_CATEGORIES } from '../constants/skills';
 
 // 1. Provenance Schema
 export const ProvenanceSchema = z.object({
@@ -174,16 +175,11 @@ export const BlogSchema = ProvenanceSchema.extend({
 export const SkillSchema = ProvenanceSchema.extend({
   id: z.string().min(1, 'ID is required'),
   name: z.string().min(1, 'Skill name is required'),
-  category: z.enum([
-    'Robotics & Control',
-    'AI & ML',
-    'Firmware & Embedded',
-    'Hardware & Circuits',
-    'Software & Tools'
-  ]),
+  category: z.enum(SKILL_CATEGORIES),
   subdiscipline: z.string().min(1, 'Subdiscipline is required'),
   verifiedCompetency: z.boolean().default(true),
   associatedProjectIds: z.array(z.string()).optional(),
+  publicationStatus: PublicationStatusSchema.default('published').optional(),
 });
 
 // 11. Achievement Schema

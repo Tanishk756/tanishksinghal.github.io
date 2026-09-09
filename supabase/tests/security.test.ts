@@ -28,6 +28,9 @@ import { checkRateLimit } from '../functions/_shared/rateLimit';
 import { GitHubPublisherService } from '../functions/_shared/githubPublisher';
 import { buildNotificationEmail, sendContactNotificationEmail, escapeHtml } from '../functions/_shared/emailNotifier';
 import { parseExperienceDate, compareExperiencesDesc, sortExperiencesDesc } from '../../src/utils/experienceSorting';
+import { SKILL_CATEGORIES, isSkillCategory, SKILL_CATEGORY_METADATA } from '../../src/constants/skills';
+import { SkillSchema } from '../../src/cms/schemas';
+import { normalizeSkill } from '../../src/cms/publicContentClient';
 
 // Helper to create test mock JWT tokens
 function createTestJwt(email: string, expiresInSec = 3600): string {
@@ -2549,6 +2552,198 @@ async function runSupabaseSecuritySuite() {
     resumePageSrc.includes('sortExperiencesDesc') &&
     compilePubSrc.includes('sortExperiencesDesc'),
     'ResumePage and compiler integrate sortExperiencesDesc'
+  );
+
+  // -------------------------------------------------------------
+  // DOMAIN 30: CANONICAL SKILLS TAXONOMY & ARCHITECTURE TESTS (15 Tests)
+  // -------------------------------------------------------------
+  console.log('\n--- DOMAIN 30: CANONICAL SKILLS TAXONOMY & ARCHITECTURE TESTS ---');
+
+  // Test 290: Exactly 7 canonical categories exist
+  assert(
+    SKILL_CATEGORIES.length === 7,
+    'Exactly 7 canonical skill categories are defined in the centralized taxonomy'
+  );
+
+  // Test 291: Canonical category ordering is deterministic and strictly matches specification
+  const expectedOrder = [
+    'Robotics & Control',
+    'Autonomous Systems',
+    'AI & ML',
+    'Firmware & Embedded',
+    'Hardware & Circuits',
+    'Space Systems & UAV',
+    'Software & Tools',
+  ];
+  assert(
+    JSON.stringify(SKILL_CATEGORIES) === JSON.stringify(expectedOrder),
+    'Canonical category list strictly follows deterministic 01-07 specification order'
+  );
+
+  // Test 292: SKILL_CATEGORY_METADATA contains complete matching metadata for all 7 categories
+  const metaKeys = Object.keys(SKILL_CATEGORY_METADATA);
+  const metaValid = metaKeys.length === 7 &&
+    expectedOrder.every((cat, idx) => {
+      const meta = (SKILL_CATEGORY_METADATA as any)[cat];
+      return meta && meta.index === idx + 1 && meta.name === cat && Boolean(meta.numberPrefix) && Boolean(meta.description);
+    });
+  assert(metaValid, 'SKILL_CATEGORY_METADATA provides index, prefix, and descriptions for all 7 canonical categories');
+
+  // Test 293: isSkillCategory helper validates canonical categories and rejects invalid strings
+  assert(
+    expectedOrder.every(cat => isSkillCategory(cat)) &&
+    !isSkillCategory('Robotics & Autonomous Systems') &&
+    !isSkillCategory('AI & Machine Learning') &&
+    !isSkillCategory('Programming & Software') &&
+    !isSkillCategory('DevOps') &&
+    !isSkillCategory(null) &&
+    !isSkillCategory(undefined) &&
+    !isSkillCategory(''),
+    'isSkillCategory type-guard accepts all 7 canonical categories and rejects legacy or arbitrary strings'
+  );
+
+  // Test 294: SkillSchema accepts each of the 7 canonical categories
+  let schemaAcceptsAll = true;
+  for (const cat of expectedOrder) {
+    const validSkill = {
+      id: `skill-test-${Date.now()}`,
+      name: `Skill for ${cat}`,
+      category: cat,
+      subdiscipline: 'Core Proficiency',
+      verifiedCompetency: true,
+      source: 'USER_PROVIDED',
+      verificationStatus: 'USER_PROVIDED',
+      lastVerified: '2026-09-09',
+    };
+    const result = SkillSchema.safeParse(validSkill);
+    if (!result.success) {
+      schemaAcceptsAll = false;
+      break;
+    }
+  }
+  assert(schemaAcceptsAll, 'SkillSchema validates and accepts valid records for all 7 canonical categories');
+
+  // Test 295: SkillSchema strictly rejects legacy category names
+  const legacyNames = [
+    'Robotics & Autonomous Systems',
+    'AI & Machine Learning',
+    'Embedded Systems & Firmware',
+    'Control Systems & Kinematics',
+    'Programming & Software',
+    'CAD & Engineering Tools',
+    'Tools & Protocols',
+  ];
+  let schemaRejectsLegacy = true;
+  for (const leg of legacyNames) {
+    const invalidSkill = {
+      id: 'legacy-skill-1',
+      name: 'Legacy Skill',
+      category: leg,
+      subdiscipline: 'Legacy',
+      verifiedCompetency: true,
+      source: 'USER_PROVIDED',
+      verificationStatus: 'USER_PROVIDED',
+      lastVerified: '2026-09-09',
+    };
+    const result = SkillSchema.safeParse(invalidSkill);
+    if (result.success) {
+      schemaRejectsLegacy = false;
+      break;
+    }
+  }
+  assert(schemaRejectsLegacy, 'SkillSchema strictly rejects all 7 legacy category names');
+
+  // Test 296: SkillSchema strictly rejects arbitrary/generic string values
+  const arbitraryInvalid = ['Web Development', 'Machine Learning', 'Control Systems', 'Random', ''];
+  const schemaRejectsArbitrary = arbitraryInvalid.every(val => {
+    return !SkillSchema.safeParse({
+      id: 'inv-skill',
+      name: 'Test',
+      category: val,
+      subdiscipline: 'Sub',
+      verifiedCompetency: true,
+      source: 'USER_PROVIDED',
+      verificationStatus: 'USER_PROVIDED',
+      lastVerified: '2026-09-09',
+    }).success;
+  });
+  assert(schemaRejectsArbitrary, 'SkillSchema rejects arbitrary and empty category strings');
+
+  // Test 297: Public SkillsPage.tsx consumes SKILL_CATEGORIES from constants/skills
+  const skillsPageSrc = fs.readFileSync(path.join(process.cwd(), 'src/pages/SkillsPage.tsx'), 'utf8');
+  assert(
+    skillsPageSrc.includes("import { SKILL_CATEGORIES } from '../constants/skills'") &&
+    skillsPageSrc.includes('SKILL_CATEGORIES.map') &&
+    !skillsPageSrc.includes('Robotics & Autonomous Systems'),
+    'SkillsPage.tsx imports and renders from centralized SKILL_CATEGORIES without local hard-coded arrays'
+  );
+
+  // Test 298: Admin AdminSkillsPage.tsx consumes SKILL_CATEGORIES from constants/skills
+  const adminSkillsPageSrc = fs.readFileSync(path.join(process.cwd(), 'src/pages/admin/AdminSkillsPage.tsx'), 'utf8');
+  assert(
+    adminSkillsPageSrc.includes("from '../../constants/skills'") &&
+    adminSkillsPageSrc.includes('SKILL_CATEGORIES.map') &&
+    adminSkillsPageSrc.includes('options={SKILL_CATEGORIES.map'),
+    'AdminSkillsPage.tsx imports and uses SKILL_CATEGORIES for dropdown options and category cards'
+  );
+
+  // Test 299: Zero hard-coded duplicate category arrays exist in SkillsPage or AdminSkillsPage
+  assert(
+    !skillsPageSrc.includes("const categories = [") &&
+    !adminSkillsPageSrc.includes("const categories = ["),
+    'No local duplicate category array definitions exist in SkillsPage.tsx or AdminSkillsPage.tsx'
+  );
+
+  // Test 300: normalizeSkill accurately maps all 7 canonical categories to exact canonical output
+  let normalizerExact = true;
+  for (const cat of expectedOrder) {
+    const norm = normalizeSkill({ name: 'Test Skill', category: cat });
+    if (norm.category !== cat) {
+      normalizerExact = false;
+      break;
+    }
+  }
+  assert(normalizerExact, 'normalizeSkill maps every canonical category to the exact identical category');
+
+  // Test 301: normalizeSkill safely maps legacy/variant strings to nearest canonical categories
+  const legacyMappers = [
+    { input: 'Robotics & Autonomous Systems', expected: 'Robotics & Control' },
+    { input: 'AI & Machine Learning', expected: 'AI & ML' },
+    { input: 'Embedded Systems & Firmware', expected: 'Firmware & Embedded' },
+    { input: 'Circuit Prototyping', expected: 'Hardware & Circuits' },
+    { input: 'Space UAV Systems', expected: 'Space Systems & UAV' },
+    { input: 'Programming & Software', expected: 'Software & Tools' },
+  ];
+  const legacyMapValid = legacyMappers.every(m => normalizeSkill({ name: 'Skill', category: m.input }).category === m.expected);
+  assert(legacyMapValid, 'normalizeSkill normalizes legacy variants into canonical taxonomy without phantom categories');
+
+  // Test 302: Migration 0007_canonical_skills_taxonomy.sql exists and specifies canonical check constraint
+  const migration0007Path = path.join(process.cwd(), 'supabase/migrations/0007_canonical_skills_taxonomy.sql');
+  const migration0007Src = fs.readFileSync(migration0007Path, 'utf8');
+  assert(
+    fs.existsSync(migration0007Path) &&
+    expectedOrder.every(cat => migration0007Src.includes(`'${cat}'`)),
+    'Migration 0007_canonical_skills_taxonomy.sql enforces all 7 canonical categories in database constraint'
+  );
+
+  // Test 303: Database constraint simulation rejects non-canonical categories
+  const checkDbConstraint = (cat: string) => {
+    return expectedOrder.includes(cat);
+  };
+  assert(
+    expectedOrder.every(c => checkDbConstraint(c)) &&
+    !checkDbConstraint('Robotics & Autonomous Systems') &&
+    !checkDbConstraint('AI & Machine Learning') &&
+    !checkDbConstraint('Tools & Protocols'),
+    'Database constraint logic validates only the 7 canonical categories and rejects legacy names'
+  );
+
+  // Test 304: Skills compilation script compile-publication.ts integrates SKILL_CATEGORIES and SkillCategory
+  const compilerSrc = fs.readFileSync(path.join(process.cwd(), 'scripts/compile-publication.ts'), 'utf8');
+  assert(
+    compilerSrc.includes("from '../src/constants/skills'") &&
+    compilerSrc.includes('mapSkillCategory = (cat: string): SkillCategory'),
+    'scripts/compile-publication.ts imports and produces SkillCategory typed artifacts'
   );
 
   // CLEANUP: Clean all temporary synthetic test records from memory

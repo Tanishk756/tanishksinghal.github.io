@@ -351,6 +351,7 @@ async function handler(req: Request): Promise<Response> {
             subcategories: Array.isArray(item.tools) ? item.tools : (Array.isArray(item.subcategories) ? item.subcategories : []),
             skills: Array.isArray(item.skills) ? item.skills : [],
             workMode: item.work_mode || item.workMode || '',
+            subdiscipline: item.subdiscipline || item.description || '',
           };
         };
 
@@ -590,6 +591,31 @@ async function handler(req: Request): Promise<Response> {
       publication_status: status,
       verification_status: verificationStatus,
       verification_notes: verificationNotes,
+      last_verified: data.last_verified || data.lastVerified || nowIso,
+      updated_at: nowIso,
+    };
+
+    return dbRecord;
+  }
+
+  function mapSkillToDb(data: Record<string, any>, status: LifecycleState, verificationStatus: string) {
+    const nowIso = new Date().toISOString();
+    const name = String(data.name || '').trim();
+    const category = String(data.category || 'Robotics & Control').trim();
+    const proficiencyLevel = data.proficiencyLevel || data.proficiency_level || data.level || 'proficient';
+    const displayOrder = Number(data.displayOrder || data.display_order) || 0;
+    const subdiscipline = String(data.subdiscipline || data.description || '').trim();
+    const description = String(data.description || data.subdiscipline || '').trim();
+
+    const dbRecord: Record<string, any> = {
+      name,
+      category,
+      proficiency_level: proficiencyLevel,
+      subdiscipline: subdiscipline || null,
+      description: description || null,
+      display_order: displayOrder,
+      publication_status: status,
+      verification_status: verificationStatus,
       last_verified: data.last_verified || data.lastVerified || nowIso,
       updated_at: nowIso,
     };
@@ -888,6 +914,36 @@ async function handler(req: Request): Promise<Response> {
         }, 201);
       }
 
+      // Specific Skills Handling
+      if (tableName === 'skills') {
+        const dbPayload = mapSkillToDb(payload, status, verificationStatus);
+        console.log(`[SKILL DEBUG] POST request received for skill: name=${dbPayload.name} category=${dbPayload.category}`);
+
+        if (payload.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.id)) {
+          (dbPayload as any).id = payload.id;
+        }
+
+        const insertRes = await querySupabaseRest('skills', {
+          method: 'POST',
+          body: JSON.stringify(dbPayload),
+        });
+        if (!insertRes.ok) {
+          console.error(`[DATABASE_ERROR] Skill insert failed:`, insertRes.error);
+          return jsonResponse({ success: false, error: `Database insert failed: ${insertRes.error}` }, 500);
+        }
+        const insertedRow = Array.isArray(insertRes.data) ? insertRes.data[0] : insertRes.data;
+        const insertedId = insertedRow?.id || payload.id;
+        console.log(`[AUDIT] user=${user.email} action=CONTENT_CREATED type=skill id=${insertedId} status=${status}`);
+        return jsonResponse({
+          success: true,
+          id: insertedId,
+          isNew: true,
+          status,
+          verificationStatus,
+          message: 'Skill record created successfully in draft state',
+        }, 201);
+      }
+
       const dbPayload = mapToDbColumns(payload, tableName);
       dbPayload.publication_status = status;
       dbPayload.verification_status = verificationStatus;
@@ -1069,6 +1125,32 @@ async function handler(req: Request): Promise<Response> {
             updatedAt: new Date().toISOString(),
             versionNumber: (payload.versionNumber || 1) + 1,
             message: `Experience record updated and transitioned to ${targetStatus}`,
+          });
+        }
+
+        // Specific Skills Handling
+        if (tableName === 'skills') {
+          const targetId = idOrSlug || payload.id;
+          const dbPayload = mapSkillToDb(payload, targetStatus, verificationStatus);
+          console.log(`[SKILL DEBUG] PUT request received for skill: targetId=${targetId}`);
+
+          const updateRes = await querySupabaseRest(`skills?id=eq.${encodeURIComponent(targetId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!updateRes.ok) {
+            console.error(`[DATABASE_ERROR] Skill update failed:`, updateRes.error);
+            return jsonResponse({ success: false, error: `Failed to update skill in database: ${updateRes.error}` }, 500);
+          }
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=skill id=${targetId} from=${currentStatus} to=${targetStatus}`);
+          return jsonResponse({
+            success: true,
+            id: targetId,
+            status: targetStatus,
+            verificationStatus,
+            updatedAt: new Date().toISOString(),
+            versionNumber: (payload.versionNumber || 1) + 1,
+            message: `Skill record updated and transitioned to ${targetStatus}`,
           });
         }
 

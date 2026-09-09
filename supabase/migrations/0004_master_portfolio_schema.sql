@@ -4,6 +4,18 @@
 -- Extends the initial schema with typed domain tables, provenance tracking,
 -- polymorphic content relationships, content versioning, and strict RLS.
 
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'experience') THEN
+        ALTER TABLE public.experience DROP CONSTRAINT IF EXISTS experience_verification_status_check;
+        ALTER TABLE public.experience ADD CONSTRAINT experience_verification_status_check CHECK (verification_status IN ('USER_PROVIDED', 'GITHUB_VERIFIED', 'PUBLIC_WEB_VERIFIED', 'PROBABLE', 'UNVERIFIED'));
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'organizations') THEN
+        ALTER TABLE public.organizations DROP CONSTRAINT IF EXISTS organizations_verification_status_check;
+        ALTER TABLE public.organizations ADD CONSTRAINT organizations_verification_status_check CHECK (verification_status IN ('USER_PROVIDED', 'GITHUB_VERIFIED', 'PUBLIC_WEB_VERIFIED', 'PROBABLE', 'UNVERIFIED'));
+    END IF;
+END $$;
+
 -- 1. PROFILES TABLE (Canonical Personal Identity & Verification Anchors)
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -233,10 +245,12 @@ CREATE TABLE IF NOT EXISTS public.certifications (
 -- 10. SKILLS TABLE
 CREATE TABLE IF NOT EXISTS public.skills (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    category TEXT NOT NULL CHECK (category IN ('Robotics & Autonomous Systems', 'AI & Machine Learning', 'Embedded Systems & Firmware', 'Control Systems & Kinematics', 'Programming & Software', 'CAD & Engineering Tools', 'Tools & Protocols')),
+    category TEXT NOT NULL CHECK (category IN ('Robotics & Control', 'Autonomous Systems', 'AI & ML', 'Firmware & Embedded', 'Hardware & Circuits', 'Space Systems & UAV', 'Software & Tools')),
     name TEXT NOT NULL CHECK (char_length(trim(name)) >= 1 AND char_length(name) <= 100),
+    subdiscipline TEXT,
     description TEXT,
-    years_experience NUMERIC(4,1),
+    proficiency_level TEXT NOT NULL DEFAULT 'Proficient' CHECK (proficiency_level IN ('Fundamental', 'Proficient', 'Advanced', 'Expert')),
+    years_experience NUMERIC(3, 1),
     evidence_urls JSONB DEFAULT '[]'::jsonb,
     display_order INTEGER NOT NULL DEFAULT 0,
     publication_status TEXT NOT NULL DEFAULT 'draft' CHECK (publication_status IN ('draft', 'review', 'approved', 'published', 'archived')),

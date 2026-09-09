@@ -1,3 +1,5 @@
+import { SkillCategory } from '../constants/skills';
+
 export type ProvenanceStatus = 
   | 'USER_PROVIDED' 
   | 'GITHUB_VERIFIED' 
@@ -250,15 +252,10 @@ export interface CertificationItem extends ProvenanceRecord {
 // 10. Skill Model
 export interface SkillItem {
   name: string;
-  category: 
-    | 'Robotics & Control' 
-    | 'Autonomous Systems' 
-    | 'AI & ML' 
-    | 'Firmware & Embedded' 
-    | 'Hardware & Circuits' 
-    | 'Space Systems & UAV' 
-    | 'Software & Tools';
+  category: SkillCategory;
   level: 'proficient' | 'working' | 'exploring';
+  subdiscipline?: string;
+  description?: string;
   highlight?: boolean;
 }
 

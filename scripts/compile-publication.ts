@@ -2,6 +2,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { sortExperiencesDesc } from '../src/utils/experienceSorting';
+import { SkillCategory, isSkillCategory } from '../src/constants/skills';
 
 interface PublishedDataset {
   profiles: any[];
@@ -389,14 +390,15 @@ export function getProductionCertifications(): CertificationItem[] {
   generatedFiles.push('certifications.ts');
 
   // 10. Skills
-  const mapSkillCategory = (cat: string) => {
+  const mapSkillCategory = (cat: string): SkillCategory => {
+    if (isSkillCategory(cat)) return cat;
     const l = (cat || '').toLowerCase();
-    if (l.includes('robot') || l.includes('control')) return 'Robotics & Control';
+    if (l.includes('robot') || l.includes('control') || l.includes('kinematic')) return 'Robotics & Control';
     if (l.includes('autonom')) return 'Autonomous Systems';
     if (l.includes('ai') || l.includes('machine') || l.includes('ml')) return 'AI & ML';
     if (l.includes('embed') || l.includes('firmware')) return 'Firmware & Embedded';
-    if (l.includes('circuit') || l.includes('hardware') || l.includes('electronic')) return 'Hardware & Circuits';
-    if (l.includes('space') || l.includes('uav')) return 'Space Systems & UAV';
+    if (l.includes('circuit') || l.includes('hardware') || l.includes('electronic') || l.includes('pcb')) return 'Hardware & Circuits';
+    if (l.includes('space') || l.includes('uav') || l.includes('aero')) return 'Space Systems & UAV';
     return 'Software & Tools';
   };
 

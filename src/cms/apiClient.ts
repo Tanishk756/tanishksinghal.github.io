@@ -160,14 +160,14 @@ export class CMSApiClient {
     });
   }
 
-  async updateContentItem(contentType: string, id: string, data: any) {
-    const targetStatus = data.publicationStatus === 'published' ? 'draft' : (data.publicationStatus || 'draft');
+  async updateContentItem(contentType: string, id: string, data: any, targetStatus?: string) {
+    const finalTargetStatus = targetStatus || (data.publicationStatus === 'published' ? 'draft' : (data.publicationStatus || 'draft'));
     const enriched = {
       ...data,
       verificationStatus: data.verificationStatus || 'USER_PROVIDED',
       source: data.source || 'USER_PROVIDED',
-      publicationStatus: targetStatus,
-      targetStatus: targetStatus,
+      publicationStatus: finalTargetStatus,
+      targetStatus: finalTargetStatus,
       lastVerified: data.lastVerified || new Date().toISOString().split('T')[0],
     };
     return this.invokeFunction<{ id: string }>('admin-content', {

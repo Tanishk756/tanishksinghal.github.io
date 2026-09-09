@@ -25,6 +25,7 @@ import {
   AchievementItem,
   BlogPost,
 } from '../types/content';
+import { SkillCategory, isSkillCategory } from '../constants/skills';
 import { SUPABASE_URL } from './supabaseClient';
 import { sortExperiencesDesc } from '../utils/experienceSorting';
 
@@ -78,14 +79,15 @@ const mapProjectCategory = (cat: string) => {
   return 'robotics';
 };
 
-const mapSkillCategory = (cat: string) => {
+const mapSkillCategory = (cat: string): SkillCategory => {
+  if (isSkillCategory(cat)) return cat;
   const l = (cat || '').toLowerCase();
-  if (l.includes('robot') || l.includes('control')) return 'Robotics & Control';
+  if (l.includes('robot') || l.includes('control') || l.includes('kinematic')) return 'Robotics & Control';
   if (l.includes('autonom')) return 'Autonomous Systems';
   if (l.includes('ai') || l.includes('machine') || l.includes('ml')) return 'AI & ML';
   if (l.includes('embed') || l.includes('firmware')) return 'Firmware & Embedded';
-  if (l.includes('circuit') || l.includes('hardware') || l.includes('electronic')) return 'Hardware & Circuits';
-  if (l.includes('space') || l.includes('uav')) return 'Space Systems & UAV';
+  if (l.includes('circuit') || l.includes('hardware') || l.includes('electronic') || l.includes('pcb')) return 'Hardware & Circuits';
+  if (l.includes('space') || l.includes('uav') || l.includes('aero')) return 'Space Systems & UAV';
   return 'Software & Tools';
 };
 
@@ -245,11 +247,15 @@ export function normalizePatent(pat: any): PatentItem {
 }
 
 export function normalizeSkill(sk: any): SkillItem {
+  const rawLevel = String(sk.proficiency_level || sk.proficiencyLevel || sk.level || 'proficient').toLowerCase();
+  const level = rawLevel.includes('adv') || rawLevel.includes('prof') ? 'proficient' : (rawLevel.includes('exp') ? 'proficient' : 'working');
   return {
     name: sk.name || '',
     category: mapSkillCategory(sk.category),
-    level: 'proficient',
-    highlight: sk.highlight || false,
+    level: level as any,
+    subdiscipline: sk.subdiscipline || sk.description || undefined,
+    description: sk.description || sk.subdiscipline || undefined,
+    highlight: Boolean(sk.highlight),
   };
 }
 
