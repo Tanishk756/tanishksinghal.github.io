@@ -110,7 +110,7 @@ export const ResearchSchema = ProvenanceSchema.extend({
   methodology: z.string().min(1, 'Methodology is required'),
   findings: z.string().optional(),
   status: z.enum(['active', 'completed', 'preliminary', 'theoretical']),
-  publicationStatus: PublicationStatusSchema.default('published'),
+  publicationStatus: PublicationStatusSchema.default('draft'),
   associatedProjectIds: z.array(z.string()).optional(),
   associatedPublicationIds: z.array(z.string()).optional(),
 });

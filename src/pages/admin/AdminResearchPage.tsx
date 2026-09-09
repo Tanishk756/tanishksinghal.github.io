@@ -4,7 +4,24 @@ import { cmsApiClient } from '../../cms/apiClient';
 import { ResearchData } from '../../cms/store';
 import { ResearchSchema } from '../../cms/schemas';
 import { TextInput, TextareaInput, SelectInput } from '../../components/admin/FormFields';
-import { Plus, Edit, Trash2, ShieldCheck, CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Trash2, ShieldCheck, CheckCircle2, Loader2, AlertCircle, RefreshCw, ArrowDownCircle } from 'lucide-react';
+
+const emptyResearchItem: ResearchData = {
+  id: '',
+  slug: '',
+  title: '',
+  domain: 'Robotics & Autonomous Systems',
+  summary: '',
+  problem: '',
+  methodology: '',
+  status: 'active',
+  publicationStatus: 'draft',
+  source: 'USER_PROVIDED',
+  sourceUrl: '',
+  verificationStatus: 'USER_PROVIDED',
+  lastVerified: new Date().toISOString().split('T')[0],
+  notes: '',
+};
 
 export const AdminResearchPage: React.FC = () => {
   const [researchList, setResearchList] = useState<ResearchData[]>([]);
@@ -14,6 +31,7 @@ export const AdminResearchPage: React.FC = () => {
   const [isNew, setIsNew] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -31,7 +49,7 @@ export const AdminResearchPage: React.FC = () => {
           id: String(r.id || `res-${Date.now()}`),
           slug: String(r.slug || ''),
           title: String(r.title || ''),
-          domain: String(r.domain || r.area || 'Robotics & Autonomy'),
+          domain: String(r.domain || r.research_area || r.area || 'Robotics & Autonomous Systems'),
           summary: String(r.summary || ''),
           problem: String(r.problem || r.research_question || ''),
           methodology: String(r.methodology || ''),
@@ -59,41 +77,69 @@ export const AdminResearchPage: React.FC = () => {
   const handleStartCreate = () => {
     setIsNew(true);
     setEditingItem({
+      ...emptyResearchItem,
       id: `res-${Date.now()}`,
       slug: '',
       title: '',
-      domain: 'Robotics & Autonomous Systems',
-      summary: '',
-      problem: '',
-      methodology: '',
-      status: 'active',
-      publicationStatus: 'draft',
-      source: 'USER_PROVIDED',
-      sourceUrl: '',
-      verificationStatus: 'USER_PROVIDED',
       lastVerified: new Date().toISOString().split('T')[0],
-      notes: '',
     });
   };
 
-  const handleSave = async (item: ResearchData) => {
+  const generateSlug = (title: string) => {
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  };
+
+  const handleTitleChange = (title: string) => {
+    if (!editingItem) return;
+    if (isNew && (!editingItem.slug || editingItem.slug === generateSlug(editingItem.title))) {
+      setEditingItem({
+        ...editingItem,
+        title,
+        slug: generateSlug(title),
+      });
+    } else {
+      setEditingItem({
+        ...editingItem,
+        title,
+      });
+    }
+  };
+
+  const handleSave = async (item: ResearchData, targetPublicationStatus: 'draft' | 'approved' = 'draft') => {
     try {
+      const cleanSlug = item.slug && item.slug.trim().length >= 2
+        ? item.slug.trim()
+        : generateSlug(item.title);
+
       const enriched: ResearchData = {
         ...item,
+        slug: cleanSlug,
         verificationStatus: item.verificationStatus || 'USER_PROVIDED',
         source: item.source || 'USER_PROVIDED',
-        publicationStatus: item.publicationStatus || 'draft',
+        publicationStatus: targetPublicationStatus,
         lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
       };
-      ResearchSchema.parse(enriched);
+
+      const parseResult = ResearchSchema.safeParse(enriched);
+      if (!parseResult.success) {
+        console.error('[SAVE_VALIDATION_ERROR]', parseResult.error.issues);
+        setError(`Validation Error: ${parseResult.error.issues[0]?.message || 'Invalid research data'}`);
+        return;
+      }
+
       setSaving(true);
+      setError(null);
       
       const res = isNew
         ? await cmsApiClient.saveContentItem('research', enriched)
-        : await cmsApiClient.updateContentItem('research', enriched.id, enriched);
+        : await cmsApiClient.updateContentItem('research', enriched.id, enriched, targetPublicationStatus);
 
       if (!res.success) {
-        alert(`Supabase Error: ${res.error || 'Failed to save research record.'}`);
+        setError(`Supabase Error: ${res.error || 'Failed to save research record.'}`);
         setSaving(false);
         return;
       }
@@ -101,12 +147,109 @@ export const AdminResearchPage: React.FC = () => {
       await loadResearch();
       setEditingItem(null);
       setIsNew(false);
-      setNotice('Research program saved successfully in Supabase.');
-      setTimeout(() => setNotice(null), 3000);
+      setNotice(`Research program saved successfully in ${targetPublicationStatus} state.`);
+      setTimeout(() => setNotice(null), 3500);
     } catch (e: any) {
-      alert(`Validation Error: ${e.errors?.[0]?.message || e.message}`);
+      console.error('[SAVE_EXCEPTION]', e);
+      setError(`Validation Error: ${e.errors?.[0]?.message || e.message}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePublish = async (item: ResearchData) => {
+    const isDirectFromList = !editingItem || editingItem.id !== item.id;
+    const targetItem = item;
+    const targetId = targetItem.id;
+
+    try {
+      setPublishingId(targetId || 'form');
+      setError(null);
+
+      const cleanSlug = targetItem.slug && targetItem.slug.trim().length >= 2
+        ? targetItem.slug.trim()
+        : generateSlug(targetItem.title);
+
+      const enriched: ResearchData = {
+        ...targetItem,
+        slug: cleanSlug,
+        verificationStatus: targetItem.verificationStatus || 'USER_PROVIDED',
+        source: targetItem.source || 'USER_PROVIDED',
+        publicationStatus: 'approved',
+        lastVerified: targetItem.lastVerified || new Date().toISOString().split('T')[0],
+      };
+
+      const parseResult = ResearchSchema.safeParse(enriched);
+      if (!parseResult.success) {
+        console.error('[PUBLISH_VALIDATION_ERROR]', JSON.stringify(parseResult.error.issues));
+        setError(`Validation Error: ${parseResult.error.issues[0]?.message || 'Invalid research data'}`);
+        setPublishingId(null);
+        return;
+      }
+
+      // 1. Save or update pre-publish record as approved
+      const saveRes = (isNew && !isDirectFromList)
+        ? await cmsApiClient.saveContentItem('research', enriched)
+        : await cmsApiClient.updateContentItem('research', targetId, enriched, 'approved');
+
+      if (!saveRes.success) {
+        setError(`Supabase Error: ${saveRes.error || 'Failed to prepare research program for release.'}`);
+        setPublishingId(null);
+        return;
+      }
+
+      const publishTargetId = saveRes.id || targetId;
+
+      // 2. Trigger canonical publication workflow
+      const pubRes = await cmsApiClient.publishContentItem(
+        'research',
+        publishTargetId,
+        'approved',
+        enriched.verificationStatus
+      );
+
+      if (!pubRes.success) {
+        setError(`Supabase Publish Error: ${pubRes.error || 'Failed to publish research program.'}`);
+      } else {
+        await loadResearch();
+        if (!isDirectFromList) {
+          setEditingItem(null);
+          setIsNew(false);
+        }
+        setNotice(`Research Program "${targetItem.title}" successfully published to live portfolio.`);
+        setTimeout(() => setNotice(null), 3500);
+      }
+    } catch (e: any) {
+      console.error('[PUBLISH_EXCEPTION]', e);
+      setError(`Publish Error: ${e.errors?.[0]?.message || e.message}`);
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
+  const handleUnpublish = async (item: ResearchData) => {
+    setPublishingId(item.id);
+    setError(null);
+    try {
+      const unpubPayload = {
+        ...item,
+        publicationStatus: 'draft',
+        currentStatus: 'published',
+        targetStatus: 'draft',
+      };
+
+      const res = await cmsApiClient.updateContentItem('research', item.id, unpubPayload, 'draft');
+      if (!res.success) {
+        setError(`Failed to unpublish research program: ${res.error || 'Unknown error'}`);
+      } else {
+        await loadResearch();
+        setNotice(`Research Program "${item.title}" unpublished and returned to draft.`);
+        setTimeout(() => setNotice(null), 3500);
+      }
+    } catch (e: any) {
+      setError(`Unpublish Error: ${e.message}`);
+    } finally {
+      setPublishingId(null);
     }
   };
 
@@ -167,9 +310,16 @@ export const AdminResearchPage: React.FC = () => {
         {editingItem && (
           <div className="p-6 rounded-2xl bg-white border border-slate-300 shadow-lg space-y-5 animate-in fade-in duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900 font-mono uppercase">
-                {isNew ? 'Create Research Program' : `Edit Research: ${editingItem.title}`}
-              </h3>
+              <div className="flex items-center gap-3">
+                <h3 className="text-sm font-bold text-slate-900 font-mono uppercase">
+                  {isNew ? 'Create Research Program' : `Edit Research: ${editingItem.title}`}
+                </h3>
+                <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold ${
+                  editingItem.publicationStatus === 'published' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                }`}>
+                  {editingItem.publicationStatus === 'published' ? 'PUBLISHED' : 'DRAFT'}
+                </span>
+              </div>
               <button
                 onClick={() => setEditingItem(null)}
                 className="text-xs font-mono text-slate-400 hover:text-slate-700"
@@ -180,25 +330,28 @@ export const AdminResearchPage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <TextInput
-                label="Research Title"
+                label="Research Title *"
                 value={editingItem.title}
-                onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                placeholder="e.g. Distributed Consensus & Target Tracking"
                 required
               />
               <TextInput
-                label="Slug"
+                label="Slug *"
                 value={editingItem.slug}
                 onChange={(e) => setEditingItem({ ...editingItem, slug: e.target.value })}
+                placeholder="e.g. distributed-consensus-tracking"
                 required
               />
               <TextInput
-                label="Domain"
+                label="Domain *"
                 value={editingItem.domain}
                 onChange={(e) => setEditingItem({ ...editingItem, domain: e.target.value })}
+                placeholder="e.g. Robotics & Autonomous Systems"
                 required
               />
               <SelectInput
-                label="Status"
+                label="Status *"
                 value={editingItem.status}
                 onChange={(e) => setEditingItem({ ...editingItem, status: e.target.value as any })}
                 options={[
@@ -212,31 +365,34 @@ export const AdminResearchPage: React.FC = () => {
             </div>
 
             <TextareaInput
-              label="Summary"
+              label="Summary *"
               value={editingItem.summary}
               onChange={(e) => setEditingItem({ ...editingItem, summary: e.target.value })}
+              placeholder="Executive summary of the research initiative..."
               required
               rows={2}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <TextareaInput
-                label="Problem Statement"
+                label="Problem Statement *"
                 value={editingItem.problem}
                 onChange={(e) => setEditingItem({ ...editingItem, problem: e.target.value })}
+                placeholder="Define the technical / empirical problem..."
                 required
                 rows={3}
               />
               <TextareaInput
-                label="Methodology & Algorithms"
+                label="Methodology & Algorithms *"
                 value={editingItem.methodology}
                 onChange={(e) => setEditingItem({ ...editingItem, methodology: e.target.value })}
+                placeholder="Outline algorithm topologies, simulation environments, and validation methods..."
                 required
                 rows={3}
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setEditingItem(null)}
@@ -246,12 +402,21 @@ export const AdminResearchPage: React.FC = () => {
               </button>
               <button
                 type="button"
-                disabled={saving}
-                onClick={() => handleSave(editingItem)}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
+                disabled={saving || publishingId !== null}
+                onClick={() => handleSave(editingItem, 'draft')}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                <span>{saving ? 'Saving to Supabase...' : 'Save Program'}</span>
+                <span>{saving ? 'Saving Draft...' : 'Save Draft'}</span>
+              </button>
+              <button
+                type="button"
+                disabled={saving || publishingId !== null}
+                onClick={() => handlePublish(editingItem)}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-mono font-medium shadow-sm disabled:opacity-50"
+              >
+                {publishingId === editingItem.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                <span>{publishingId === editingItem.id ? 'Publishing...' : 'Publish to Live Portfolio'}</span>
               </button>
             </div>
           </div>
@@ -276,58 +441,85 @@ export const AdminResearchPage: React.FC = () => {
         {/* Research List */}
         {!loading && researchList.length > 0 && (
           <div className="space-y-4">
-            {researchList.map((res) => (
-              <div key={res.id} className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 font-semibold">
-                      {res.domain || 'Robotics'}
-                    </span>
-                    <span className="text-xs font-mono text-slate-400 font-semibold">
-                      [{(res.status || 'active').toUpperCase()}]
-                    </span>
-                    <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold ${
-                      res.publicationStatus === 'published' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
-                    }`}>
-                      {res.publicationStatus || 'draft'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold ${
-                        res.verificationStatus === 'USER_PROVIDED' || res.verificationStatus === 'PUBLIC_WEB_VERIFIED' || res.verificationStatus === 'GITHUB_VERIFIED'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-amber-100 text-amber-800'
-                      }`}
-                    >
-                      <ShieldCheck className="w-3 h-3" />
-                      <span>{res.verificationStatus}</span>
-                    </span>
-                    <button
-                      onClick={() => {
-                        setIsNew(false);
-                        setEditingItem(res);
-                      }}
-                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                      title="Edit"
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(res.id, res.title)}
-                      disabled={deletingId === res.id}
-                      className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 disabled:opacity-50 transition-colors"
-                      title="Delete"
-                    >
-                      {deletingId === res.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </div>
+            {researchList.map((res) => {
+              const isPublished = res.publicationStatus === 'published';
+              return (
+                <div key={res.id} className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 font-semibold">
+                        {res.domain || 'Robotics & Autonomous Systems'}
+                      </span>
+                      <span className="text-xs font-mono text-slate-400 font-semibold">
+                        [{(res.status || 'active').toUpperCase()}]
+                      </span>
+                      <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold ${
+                        isPublished ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                      }`}>
+                        {isPublished ? 'PUBLISHED' : 'DRAFT'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold ${
+                          res.verificationStatus === 'USER_PROVIDED' || res.verificationStatus === 'PUBLIC_WEB_VERIFIED' || res.verificationStatus === 'GITHUB_VERIFIED'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        <ShieldCheck className="w-3 h-3" />
+                        <span>{res.verificationStatus}</span>
+                      </span>
 
-                <h3 className="text-base font-bold text-slate-900">{res.title}</h3>
-                <p className="text-xs text-slate-600 leading-relaxed font-sans">{res.summary}</p>
-              </div>
-            ))}
+                      {/* Explicit Publish / Unpublish Actions */}
+                      {!isPublished ? (
+                        <button
+                          onClick={() => handlePublish(res)}
+                          disabled={publishingId === res.id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-mono font-medium disabled:opacity-50 transition-colors"
+                          title="Publish to live portfolio"
+                        >
+                          {publishingId === res.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                          <span>Publish</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleUnpublish(res)}
+                          disabled={publishingId === res.id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-mono font-medium disabled:opacity-50 transition-colors"
+                          title="Unpublish from live portfolio"
+                        >
+                          {publishingId === res.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowDownCircle className="w-3.5 h-3.5" />}
+                          <span>Unpublish</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          setIsNew(false);
+                          setEditingItem(res);
+                        }}
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                        title="Edit"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(res.id, res.title)}
+                        disabled={deletingId === res.id}
+                        className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 disabled:opacity-50 transition-colors"
+                        title="Delete"
+                      >
+                        {deletingId === res.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <h3 className="text-base font-bold text-slate-900">{res.title}</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed font-sans">{res.summary}</p>
+                </div>
+              );
+            })}
           </div>
         )}
 

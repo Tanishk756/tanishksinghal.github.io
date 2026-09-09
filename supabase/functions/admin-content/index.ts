@@ -319,10 +319,13 @@ async function handler(req: Request): Promise<Response> {
             lastVerified: item.last_verified ? String(item.last_verified).split('T')[0] : (item.lastVerified || new Date().toISOString().split('T')[0]),
             sourceUrl: item.evidence_url || item.source_url || item.sourceUrl || '',
             source: item.source || 'USER_PROVIDED',
-            domain: item.area || item.domain || '',
+            domain: item.domain || item.research_area || item.area || '',
             status: statusVal,
-            abstract: item.description || item.abstract || '',
-            description: item.description || item.abstract || '',
+            summary: item.summary || item.description || item.abstract || '',
+            methodology: item.methodology || item.approach || '',
+            problem: item.problem || item.research_question || '',
+            abstract: item.description || item.abstract || item.summary || '',
+            description: item.description || item.abstract || item.summary || '',
             applicationNumber: item.application_number || item.applicationNumber || '',
             patentNumber: item.patent_number || item.patentNumber || '',
             filingDate: item.filing_date || item.filingDate || '',
@@ -331,7 +334,6 @@ async function handler(req: Request): Promise<Response> {
             inventors: Array.isArray(item.inventors) ? item.inventors : [],
             jurisdiction: item.jurisdiction || 'India / International',
             assignee: item.assignee || '',
-            problem: item.research_question || item.problem || '',
             tagline: item.subtitle || item.tagline || '',
             startDate: item.start_date || item.startDate || item.timeframe || '',
             endDate: item.end_date || item.endDate || '',
@@ -621,6 +623,52 @@ async function handler(req: Request): Promise<Response> {
     };
 
     return dbRecord;
+  }
+
+  function mapResearchToDb(data: Record<string, any>, status: LifecycleState, verificationStatus: string) {
+    const nowIso = new Date().toISOString();
+    const cleanSlug = data.slug && String(data.slug).trim().length >= 2
+      ? String(data.slug).trim()
+      : (data.title ? String(data.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `res-${Date.now()}`);
+
+    const cleanTitle = String(data.title || 'Untitled Research Program').trim();
+    const cleanDomain = String(data.domain || data.research_area || data.area || 'Robotics & Autonomous Systems').trim();
+    const cleanSummary = String(data.summary || data.description || '').trim();
+    const cleanProblem = String(data.problem || data.research_question || '').trim();
+    const cleanMethodology = String(data.methodology || data.approach || '').trim();
+    const cleanKeyContribution = String(data.key_contribution || data.contribution || data.contributions || '').trim();
+    const cleanCollaborators = Array.isArray(data.collaborators)
+      ? data.collaborators.map(String).filter(Boolean)
+      : (typeof data.collaborators === 'string' && data.collaborators.trim() ? data.collaborators.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
+
+    const rawStatus = String(data.status || 'active').toLowerCase().trim();
+    const allowedStatuses = ['active', 'completed', 'preliminary', 'theoretical'];
+    const validStatus = allowedStatuses.includes(rawStatus) ? rawStatus : 'active';
+
+    const displayOrder = Number(data.displayOrder || data.display_order) || 0;
+    const evidenceUrl = data.evidenceUrl || data.evidence_url || data.sourceUrl || data.source_url || null;
+    const verificationNotes = data.verificationNotes || data.verification_notes || data.notes || null;
+
+    return {
+      slug: cleanSlug,
+      title: cleanTitle,
+      domain: cleanDomain,
+      research_area: cleanDomain,
+      summary: cleanSummary,
+      problem: cleanProblem,
+      research_question: cleanProblem,
+      methodology: cleanMethodology,
+      key_contribution: cleanKeyContribution,
+      status: validStatus,
+      collaborators: cleanCollaborators,
+      display_order: displayOrder,
+      publication_status: status,
+      verification_status: verificationStatus,
+      verification_notes: verificationNotes,
+      evidence_url: evidenceUrl ? String(evidenceUrl).trim() : null,
+      last_verified: data.lastVerified || data.last_verified || nowIso,
+      updated_at: nowIso,
+    };
   }
 
   function mapToDbColumns(data: Record<string, any>, targetTable: string) {
@@ -944,6 +992,58 @@ async function handler(req: Request): Promise<Response> {
         }, 201);
       }
 
+      // Specific Research Programs Handling
+      if (tableName === 'research_programs') {
+        const dbPayload = mapResearchToDb(payload, status, verificationStatus);
+        console.log(`[RESEARCH DEBUG] POST request received for research program: slug=${dbPayload.slug}`);
+
+        const existingRes = dbPayload.slug ? await querySupabaseRest(`research_programs?slug=eq.${encodeURIComponent(dbPayload.slug)}&limit=1`) : null;
+        if (existingRes && existingRes.ok && existingRes.data && existingRes.data[0]?.id) {
+          const existingId = existingRes.data[0].id;
+          console.log(`[RESEARCH DEBUG] Existing research program found by slug (${existingId}), performing PATCH update`);
+          const updateRes = await querySupabaseRest(`research_programs?id=eq.${encodeURIComponent(existingId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!updateRes.ok) {
+            console.error(`[DATABASE_ERROR] Research program update failed:`, updateRes.error);
+            return jsonResponse({ success: false, error: `Failed to update research program: ${updateRes.error}` }, 500);
+          }
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=research id=${existingId} status=${status}`);
+          return jsonResponse({
+            success: true,
+            id: existingId,
+            isNew: false,
+            status,
+            verificationStatus,
+            message: 'Research program updated successfully in draft state',
+          }, 200);
+        } else {
+          if (payload.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.id)) {
+            (dbPayload as any).id = payload.id;
+          }
+          const insertRes = await querySupabaseRest('research_programs', {
+            method: 'POST',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!insertRes.ok) {
+            console.error(`[DATABASE_ERROR] Research program insert failed:`, insertRes.error);
+            return jsonResponse({ success: false, error: `Database insert failed: ${insertRes.error}` }, 500);
+          }
+          const insertedRow = Array.isArray(insertRes.data) ? insertRes.data[0] : insertRes.data;
+          const insertedId = insertedRow?.id || payload.id;
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_CREATED type=research id=${insertedId} status=${status}`);
+          return jsonResponse({
+            success: true,
+            id: insertedId,
+            isNew: true,
+            status,
+            verificationStatus,
+            message: 'Research program created successfully in draft state',
+          }, 201);
+        }
+      }
+
       const dbPayload = mapToDbColumns(payload, tableName);
       dbPayload.publication_status = status;
       dbPayload.verification_status = verificationStatus;
@@ -1151,6 +1251,35 @@ async function handler(req: Request): Promise<Response> {
             updatedAt: new Date().toISOString(),
             versionNumber: (payload.versionNumber || 1) + 1,
             message: `Skill record updated and transitioned to ${targetStatus}`,
+          });
+        }
+
+        // Specific Research Programs Handling
+        if (tableName === 'research_programs') {
+          const targetId = idOrSlug || payload.id;
+          const dbPayload = mapResearchToDb(payload, targetStatus, verificationStatus);
+          console.log(`[RESEARCH DEBUG] PUT request received for research program: targetId=${targetId}`);
+
+          const lookupRes = await querySupabaseRest(`research_programs?or=(id.eq.${encodeURIComponent(targetId)},slug.eq.${encodeURIComponent(targetId)})&limit=1`);
+          const recordId = lookupRes.ok && lookupRes.data && lookupRes.data[0]?.id ? lookupRes.data[0].id : targetId;
+
+          const updateRes = await querySupabaseRest(`research_programs?id=eq.${encodeURIComponent(recordId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!updateRes.ok) {
+            console.error(`[DATABASE_ERROR] Research program update failed:`, updateRes.error);
+            return jsonResponse({ success: false, error: `Failed to update research program in database: ${updateRes.error}` }, 500);
+          }
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=research id=${recordId} from=${currentStatus} to=${targetStatus}`);
+          return jsonResponse({
+            success: true,
+            id: recordId,
+            status: targetStatus,
+            verificationStatus,
+            updatedAt: new Date().toISOString(),
+            versionNumber: (payload.versionNumber || 1) + 1,
+            message: `Research program updated and transitioned to ${targetStatus}`,
           });
         }
 

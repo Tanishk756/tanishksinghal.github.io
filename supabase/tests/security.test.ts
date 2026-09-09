@@ -29,8 +29,8 @@ import { GitHubPublisherService } from '../functions/_shared/githubPublisher';
 import { buildNotificationEmail, sendContactNotificationEmail, escapeHtml } from '../functions/_shared/emailNotifier';
 import { parseExperienceDate, compareExperiencesDesc, sortExperiencesDesc } from '../../src/utils/experienceSorting';
 import { SKILL_CATEGORIES, isSkillCategory, SKILL_CATEGORY_METADATA } from '../../src/constants/skills';
-import { SkillSchema } from '../../src/cms/schemas';
-import { normalizeSkill } from '../../src/cms/publicContentClient';
+import { SkillSchema, ResearchSchema } from '../../src/cms/schemas';
+import { normalizeSkill, normalizeResearch } from '../../src/cms/publicContentClient';
 
 // Helper to create test mock JWT tokens
 function createTestJwt(email: string, expiresInSec = 3600): string {
@@ -2744,6 +2744,206 @@ async function runSupabaseSecuritySuite() {
     compilerSrc.includes("from '../src/constants/skills'") &&
     compilerSrc.includes('mapSkillCategory = (cat: string): SkillCategory'),
     'scripts/compile-publication.ts imports and produces SkillCategory typed artifacts'
+  );
+
+  console.log('\n--- DOMAIN 31: RESEARCH PROGRAMS CMS & LIFECYCLE INTEGRATION TESTS ---');
+
+  // Test 305: ResearchSchema validates complete valid research program with canonical fields
+  const validResearchRecord = {
+    id: 'res-test-101',
+    slug: 'distributed-consensus-tracking',
+    title: 'Distributed Consensus & Multi-Agent Target Tracking',
+    domain: 'Robotics & Autonomous Systems',
+    status: 'active' as const,
+    summary: 'Autonomous decentralized multi-agent coordination for non-linear target tracking.',
+    problem: 'State estimation under packet loss and asynchronous communication topologies.',
+    methodology: 'Extended Kalman Consensus Filters with Lyapunov stability analysis.',
+    publicationStatus: 'draft' as const,
+    verificationStatus: 'USER_PROVIDED' as const,
+    source: 'USER_PROVIDED',
+    lastVerified: '2026-09-09',
+  };
+  const resParsed = ResearchSchema.safeParse(validResearchRecord);
+  assert(resParsed.success, 'ResearchSchema validates and accepts valid research program record');
+
+  // Test 306: ResearchSchema default publicationStatus is 'draft'
+  const recordWithoutPubStatus = {
+    id: 'res-test-102',
+    slug: 'quadrotor-perching-dynamics',
+    title: 'High-Speed Quadrotor Perching Dynamics',
+    domain: 'Robotics & Autonomous Systems',
+    status: 'active' as const,
+    summary: 'Dynamic perching on inclined surfaces utilizing morphing landing gear.',
+    problem: 'Aggressive pitch trajectory tracking within 50ms time windows.',
+    methodology: 'Model Predictive Path Integral (MPPI) control.',
+    verificationStatus: 'USER_PROVIDED' as const,
+    source: 'USER_PROVIDED',
+    lastVerified: '2026-09-09',
+  };
+  const resParsedDefault = ResearchSchema.safeParse(recordWithoutPubStatus);
+  assert(
+    resParsedDefault.success && (resParsedDefault.data as any).publicationStatus === 'draft',
+    'ResearchSchema default publicationStatus is explicitly "draft"'
+  );
+
+  // Test 307: ResearchSchema rejects invalid research status values
+  const invalidStatusRecord = {
+    ...validResearchRecord,
+    status: 'unknown_status' as any,
+  };
+  const invalidStatusRes = ResearchSchema.safeParse(invalidStatusRecord);
+  assert(!invalidStatusRes.success, 'ResearchSchema strictly rejects invalid research status values');
+
+  // Test 308: ResearchSchema enforces required domain, title, slug, summary, problem, methodology
+  const missingDomainRecord = {
+    ...validResearchRecord,
+    domain: '',
+  };
+  assert(!ResearchSchema.safeParse(missingDomainRecord).success, 'ResearchSchema requires non-empty domain');
+
+  const missingProblemRecord = {
+    ...validResearchRecord,
+    problem: '',
+  };
+  assert(!ResearchSchema.safeParse(missingProblemRecord).success, 'ResearchSchema requires non-empty problem statement');
+
+  const missingMethodologyRecord = {
+    ...validResearchRecord,
+    methodology: '',
+  };
+  assert(!ResearchSchema.safeParse(missingMethodologyRecord).success, 'ResearchSchema requires non-empty methodology');
+
+  // Test 309: normalizeResearch normalizes domain, problem, methodology, summary, contributions
+  const rawDbResearch = {
+    id: 'res-uuid-1234',
+    slug: 'visual-inertial-odometry',
+    title: 'Visual-Inertial Odometry in Degraded Environments',
+    domain: 'Robotics & Autonomous Systems',
+    research_area: 'Robotics & Autonomous Systems',
+    summary: 'Robust SLAM in low-light conditions.',
+    problem: 'Feature deprivation in underground tunnels.',
+    methodology: 'Direct photometric tracking with IMU pre-integration.',
+    key_contribution: 'Demonstrated sub-centimeter drift across 500m runs.',
+    publication_status: 'published',
+    verification_status: 'USER_PROVIDED',
+    last_verified: '2026-09-09',
+  };
+  const normalizedRes = normalizeResearch(rawDbResearch);
+  assert(
+    normalizedRes.title === rawDbResearch.title &&
+    normalizedRes.domain === 'Robotics & Autonomous Systems' &&
+    normalizedRes.summary === rawDbResearch.summary &&
+    normalizedRes.methodology === rawDbResearch.methodology &&
+    normalizedRes.contributions.length > 0 &&
+    normalizedRes.contributions[0] === 'Demonstrated sub-centimeter drift across 500m runs.',
+    'normalizeResearch correctly maps domain, problem, methodology, summary, and contributions'
+  );
+
+  // Test 310: normalizeResearch falls back to canonical domain if domain is missing
+  const resMissingDomain = {
+    id: 'res-uuid-5678',
+    slug: 'uav-path-planning',
+    title: 'UAV Path Planning',
+    summary: 'Optimal trajectory generation.',
+    methodology: 'A* with minimum snap optimization.',
+    publication_status: 'published',
+    verification_status: 'USER_PROVIDED',
+  };
+  const normMissing = normalizeResearch(resMissingDomain);
+  assert(
+    normMissing.domain === 'Robotics & Autonomous Systems',
+    'normalizeResearch defaults missing domain to canonical "Robotics & Autonomous Systems"'
+  );
+
+  // Test 311: Research status and publication status remain decoupled
+  const publishedPreliminary = {
+    ...validResearchRecord,
+    status: 'preliminary' as const,
+    publicationStatus: 'published' as const,
+  };
+  const pubPrelimRes = ResearchSchema.safeParse(publishedPreliminary);
+  assert(
+    pubPrelimRes.success &&
+    pubPrelimRes.data.status === 'preliminary' &&
+    pubPrelimRes.data.publicationStatus === 'published',
+    'Research investigation status (preliminary) and publication status (published) are decoupled'
+  );
+
+  // Test 312: Admin-content edge function includes dedicated research_programs POST/PUT handling
+  const adminContentSrc31 = fs.readFileSync(path.join(process.cwd(), 'supabase/functions/admin-content/index.ts'), 'utf8');
+  assert(
+    adminContentSrc31.includes('mapResearchToDb') &&
+    adminContentSrc31.includes("if (tableName === 'research_programs')") &&
+    adminContentSrc31.includes('domain: cleanDomain') &&
+    adminContentSrc31.includes('problem: cleanProblem'),
+    'admin-content edge function contains dedicated schema-whitelisted research_programs mapper'
+  );
+
+  // Test 313: Admin-publish includes research_programs in domain tables and tablesWithSlug
+  const adminPublishSrc31 = fs.readFileSync(path.join(process.cwd(), 'supabase/functions/admin-publish/index.ts'), 'utf8');
+  assert(
+    adminPublishSrc31.includes("research: 'research_programs'") &&
+    adminPublishSrc31.includes("tablesWithSlug = ['projects', 'research_programs'"),
+    'admin-publish edge function recognizes research_programs with slug lookup'
+  );
+
+  // Test 314: Public-content edge function queries research_programs with strict publication_status = published
+  const publicContentSrc31 = fs.readFileSync(path.join(process.cwd(), 'supabase/functions/public-content/index.ts'), 'utf8');
+  assert(
+    publicContentSrc31.includes("research: 'research_programs'") &&
+    publicContentSrc31.includes("params.set('publication_status', 'eq.published')"),
+    'public-content edge function enforces publication_status = published for research_programs'
+  );
+
+  // Test 315: AdminResearchPage provides explicit Save Draft, Publish, Unpublish, and Delete actions
+  const adminResearchPageSrc = fs.readFileSync(path.join(process.cwd(), 'src/pages/admin/AdminResearchPage.tsx'), 'utf8');
+  assert(
+    adminResearchPageSrc.includes('handleSave') &&
+    adminResearchPageSrc.includes('handlePublish') &&
+    adminResearchPageSrc.includes('handleUnpublish') &&
+    adminResearchPageSrc.includes('handleDelete') &&
+    adminResearchPageSrc.includes('PUBLISHED') &&
+    adminResearchPageSrc.includes('DRAFT'),
+    'AdminResearchPage implements full Draft/Publish/Unpublish/Edit/Delete lifecycle UI'
+  );
+
+  // Test 316: AdminResearchPage does NOT automatically publish on creation
+  assert(
+    adminResearchPageSrc.includes("publicationStatus: 'draft'") &&
+    adminResearchPageSrc.includes("handleSave(editingItem, 'draft')"),
+    'AdminResearchPage strictly saves new items as draft by default'
+  );
+
+  // Test 317: Migration 0009_research_programs_domain_schema.sql defines canonical domain and problem columns
+  const migration0009Path = path.join(process.cwd(), 'supabase/migrations/0009_research_programs_domain_schema.sql');
+  assert(fs.existsSync(migration0009Path), 'Migration 0009_research_programs_domain_schema.sql exists');
+  const migration0009Src = fs.readFileSync(migration0009Path, 'utf8');
+  assert(
+    migration0009Src.includes('ADD COLUMN IF NOT EXISTS domain TEXT') &&
+    migration0009Src.includes('ADD COLUMN IF NOT EXISTS problem TEXT'),
+    'Migration 0009 adds domain and problem columns to public.research_programs'
+  );
+
+  // Test 318: Lifecycle transition allows published -> draft (unpublish)
+  const unpublishTransition = validateLifecycleTransition('published', 'draft');
+  assert(unpublishTransition.valid, 'Lifecycle matrix allows published -> draft transition for unpublish workflow');
+
+  // Test 319: Provenance check enforces verified states for research publication
+  assert(validatePublicationProvenance('USER_PROVIDED').valid, 'USER_PROVIDED provenance is approved for publication');
+  assert(validatePublicationProvenance('GITHUB_VERIFIED').valid, 'GITHUB_VERIFIED provenance is approved for publication');
+  assert(validatePublicationProvenance('PUBLIC_WEB_VERIFIED').valid, 'PUBLIC_WEB_VERIFIED provenance is approved for publication');
+  assert(!validatePublicationProvenance('PROBABLE').valid, 'PROBABLE provenance is rejected for publication');
+  assert(!validatePublicationProvenance('UNVERIFIED').valid, 'UNVERIFIED provenance is rejected for publication');
+
+  // Test 320: Public ResearchPage renders from runtime PublicContentContext
+  const researchPageSrc = fs.readFileSync(path.join(process.cwd(), 'src/pages/ResearchPage.tsx'), 'utf8');
+  assert(
+    researchPageSrc.includes('usePublicContent()') &&
+    researchPageSrc.includes('prog.title') &&
+    researchPageSrc.includes('prog.domain') &&
+    researchPageSrc.includes('prog.summary') &&
+    researchPageSrc.includes('prog.methodology'),
+    'ResearchPage renders published research programs from runtime Supabase client'
   );
 
   // CLEANUP: Clean all temporary synthetic test records from memory
