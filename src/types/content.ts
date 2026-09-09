@@ -49,7 +49,8 @@ export type ProjectCategory =
   | 'uav-aerospace' 
   | 'embedded' 
   | 'ai-ml' 
-  | 'space-systems';
+  | 'space-systems'
+  | 'software-tools';
 
 export interface SubsystemBlock {
   name: string;

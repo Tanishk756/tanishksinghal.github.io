@@ -49,7 +49,7 @@ export const ProjectSchema = ProvenanceSchema.extend({
   slug: z.string().min(1, 'Slug is required').regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
   title: z.string().min(1, 'Title is required'),
   tagline: z.string().min(1, 'Tagline is required'),
-  category: z.enum(['robotics', 'autonomy', 'uav-aerospace', 'embedded', 'ai-ml', 'space-systems']),
+  category: z.enum(['robotics', 'autonomy', 'uav-aerospace', 'embedded', 'ai-ml', 'space-systems', 'software-tools']),
   subcategories: z.array(z.string()),
   status: z.enum(['completed', 'in-progress', 'prototype', 'research']),
   publicationStatus: PublicationStatusSchema.default('published'),

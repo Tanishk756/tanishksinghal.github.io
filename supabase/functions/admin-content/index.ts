@@ -312,6 +312,12 @@ async function handler(req: Request): Promise<Response> {
               ? (item.status === 'Granted' ? 'granted' : (item.status === 'Published / Pending Examination' ? 'published' : (item.status === 'Under Review' ? 'in-preparation' : (item.status === 'Abandoned' ? 'abandoned' : 'filed'))))
               : (item.status_label || item.status || 'active'));
 
+          const projectHardware = Array.isArray(item.hardware_specs) ? item.hardware_specs.join(', ') : (item.hardware || '');
+          const projectSoftware = Array.isArray(item.software_stack) ? item.software_stack.join(', ') : (item.software || '');
+          const projectSubcategories = Array.isArray(item.software_stack) && item.software_stack.length > 0
+            ? item.software_stack
+            : (Array.isArray(item.subcategories) && item.subcategories.length > 0 ? item.subcategories : (Array.isArray(item.tools) ? item.tools : []));
+
           return {
             ...item,
             publicationStatus: item.publication_status || item.publicationStatus || 'draft',
@@ -320,10 +326,22 @@ async function handler(req: Request): Promise<Response> {
             sourceUrl: item.evidence_url || item.source_url || item.sourceUrl || '',
             source: item.source || 'USER_PROVIDED',
             domain: item.domain || item.research_area || item.area || '',
+            category: item.category || 'robotics',
             status: statusVal,
             summary: item.summary || item.description || item.abstract || '',
             methodology: item.methodology || item.approach || '',
             problem: item.problem || item.research_question || '',
+            objective: item.objective || item.solution || '',
+            architecture: item.architecture || '',
+            hardware: projectHardware,
+            software: projectSoftware,
+            hardware_specs: Array.isArray(item.hardware_specs) ? item.hardware_specs : [],
+            software_stack: Array.isArray(item.software_stack) ? item.software_stack : [],
+            results: Array.isArray(item.results) ? item.results.join('\n') : (typeof item.results === 'string' ? item.results : ''),
+            challenges: Array.isArray(item.challenges) ? item.challenges.map((c: any) => typeof c === 'string' ? c : (c.challenge || '')).join('\n') : (typeof item.challenges === 'string' ? item.challenges : ''),
+            githubUrl: item.github_url || item.githubUrl || '',
+            demoUrl: item.demo_url || item.demoUrl || '',
+            paperUrl: item.paper_url || item.docs_url || item.paperUrl || '',
             abstract: item.description || item.abstract || item.summary || '',
             description: item.description || item.abstract || item.summary || '',
             applicationNumber: item.application_number || item.applicationNumber || '',
@@ -350,7 +368,7 @@ async function handler(req: Request): Promise<Response> {
             keywords: Array.isArray(item.keywords) ? item.keywords : [],
             responsibilities: Array.isArray(item.responsibilities) ? item.responsibilities : [],
             technologies: Array.isArray(item.technologies) ? item.technologies : [],
-            subcategories: Array.isArray(item.tools) ? item.tools : (Array.isArray(item.subcategories) ? item.subcategories : []),
+            subcategories: projectSubcategories,
             skills: Array.isArray(item.skills) ? item.skills : [],
             workMode: item.work_mode || item.workMode || '',
             subdiscipline: item.subdiscipline || item.description || '',
@@ -665,6 +683,107 @@ async function handler(req: Request): Promise<Response> {
       publication_status: status,
       verification_status: verificationStatus,
       evidence_url: evidenceUrl ? String(evidenceUrl).trim() : null,
+      last_verified: data.lastVerified || data.last_verified || nowIso,
+      updated_at: nowIso,
+    };
+  }
+
+  function mapProjectToDb(data: Record<string, any>, status: LifecycleState, verificationStatus: string) {
+    const nowIso = new Date().toISOString();
+    const cleanSlug = data.slug && String(data.slug).trim().length >= 2
+      ? String(data.slug).trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '')
+      : (data.title ? String(data.title).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '') : `proj-${Date.now()}`);
+
+    const cleanTitle = String(data.title || 'Untitled Project').trim();
+    const cleanSubtitle = String(data.tagline || data.subtitle || data.overview || '').trim();
+    const cleanCategory = String(data.category || 'robotics').trim();
+    const rawStatus = String(data.status || 'in-progress').toLowerCase().trim();
+    const allowedStatuses = ['completed', 'in-progress', 'prototype', 'research'];
+    const validStatus = allowedStatuses.includes(rawStatus) ? rawStatus : 'in-progress';
+
+    const startDate = String(data.startDate || data.start_date || data.timeframe || '').trim();
+    const endDate = data.endDate || data.end_date ? String(data.endDate || data.end_date).trim() : null;
+    const timeframe = startDate ? (endDate ? `${startDate} – ${endDate}` : startDate) : null;
+    const role = String(data.role || 'Lead Systems Engineer').trim();
+    const organization = data.organization ? String(data.organization).trim() : null;
+
+    const overview = String(data.overview || '').trim();
+    const problem = String(data.problem || '').trim();
+    const objective = String(data.objective || '').trim();
+    const architecture = String(data.architecture || '').trim();
+
+    const parseArrayOrJson = (val: any) => {
+      if (!val) return [];
+      if (Array.isArray(val)) return val;
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        if (!trimmed) return [];
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) return parsed;
+        } catch {
+          if (trimmed.includes('\n')) return trimmed.split('\n').map((s: string) => s.trim()).filter(Boolean);
+          if (trimmed.includes(',')) return trimmed.split(',').map((s: string) => s.trim()).filter(Boolean);
+          return [trimmed];
+        }
+      }
+      return [];
+    };
+
+    const hardwareSpecs = parseArrayOrJson(data.hardware_specs || data.hardwareStack || data.hardware);
+    const softwareStack = parseArrayOrJson(data.software_stack || data.softwareStack || data.subcategories || data.software || data.technologies || data.tools);
+    const algorithms = parseArrayOrJson(data.algorithms);
+    const challenges = parseArrayOrJson(data.challenges);
+    const results = parseArrayOrJson(data.results);
+    const limitations = parseArrayOrJson(data.limitations || data.lessonsLearned || data.lessons_learned);
+    const futureWork = parseArrayOrJson(data.future_work || data.futureWork);
+    const subsystems = Array.isArray(data.subsystems) ? data.subsystems : [];
+
+    const githubUrl = data.githubUrl || data.github_url || null;
+    const demoUrl = data.demoUrl || data.demo_url || null;
+    const paperUrl = data.paperUrl || data.paper_url || data.docs_url || data.docsUrl || null;
+    const docsUrl = data.docsUrl || data.docs_url || data.paperUrl || data.paper_url || null;
+    const coverImage = data.coverImage || data.cover_image || null;
+
+    const featured = Boolean(data.featured);
+    const displayOrder = Number(data.displayOrder || data.display_order) || 0;
+    const evidenceUrl = data.evidenceUrl || data.evidence_url || data.sourceUrl || data.source_url || null;
+    const verificationNotes = data.verificationNotes || data.verification_notes || data.notes || null;
+
+    return {
+      slug: cleanSlug,
+      title: cleanTitle,
+      subtitle: cleanSubtitle,
+      category: cleanCategory,
+      status: validStatus,
+      start_date: startDate || null,
+      end_date: endDate,
+      timeframe: timeframe,
+      role: role,
+      organization: organization,
+      overview: overview,
+      problem: problem,
+      objective: objective,
+      architecture: architecture,
+      hardware_specs: hardwareSpecs,
+      software_stack: softwareStack,
+      algorithms: algorithms,
+      challenges: challenges,
+      results: results,
+      limitations: limitations,
+      future_work: futureWork,
+      subsystems: subsystems,
+      github_url: githubUrl ? String(githubUrl).trim() : null,
+      demo_url: demoUrl ? String(demoUrl).trim() : null,
+      docs_url: docsUrl ? String(docsUrl).trim() : null,
+      paper_url: paperUrl ? String(paperUrl).trim() : null,
+      cover_image: coverImage ? String(coverImage).trim() : null,
+      featured: featured,
+      display_order: displayOrder,
+      publication_status: status,
+      verification_status: verificationStatus,
+      evidence_url: evidenceUrl ? String(evidenceUrl).trim() : null,
+      verification_notes: verificationNotes ? String(verificationNotes).trim() : null,
       last_verified: data.lastVerified || data.last_verified || nowIso,
       updated_at: nowIso,
     };
@@ -1043,6 +1162,58 @@ async function handler(req: Request): Promise<Response> {
         }
       }
 
+      // Specific Projects Handling
+      if (tableName === 'projects') {
+        const dbPayload = mapProjectToDb(payload, status, verificationStatus);
+        console.log(`[PROJECT DEBUG] POST request received for project: slug=${dbPayload.slug}`);
+
+        const existingProj = dbPayload.slug ? await querySupabaseRest(`projects?slug=eq.${encodeURIComponent(dbPayload.slug)}&limit=1`) : null;
+        if (existingProj && existingProj.ok && existingProj.data && existingProj.data[0]?.id) {
+          const existingId = existingProj.data[0].id;
+          console.log(`[PROJECT DEBUG] Existing project found by slug (${existingId}), performing PATCH update`);
+          const updateRes = await querySupabaseRest(`projects?id=eq.${encodeURIComponent(existingId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!updateRes.ok) {
+            console.error(`[DATABASE_ERROR] Project update failed:`, updateRes.error);
+            return jsonResponse({ success: false, error: `Failed to update project: ${updateRes.error}` }, 500);
+          }
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=project id=${existingId} status=${status}`);
+          return jsonResponse({
+            success: true,
+            id: existingId,
+            isNew: false,
+            status,
+            verificationStatus,
+            message: 'Project updated successfully in draft state',
+          }, 200);
+        } else {
+          if (payload.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.id)) {
+            (dbPayload as any).id = payload.id;
+          }
+          const insertRes = await querySupabaseRest('projects', {
+            method: 'POST',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!insertRes.ok) {
+            console.error(`[DATABASE_ERROR] Project insert failed:`, insertRes.error);
+            return jsonResponse({ success: false, error: `Database insert failed: ${insertRes.error}` }, 500);
+          }
+          const insertedRow = Array.isArray(insertRes.data) ? insertRes.data[0] : insertRes.data;
+          const insertedId = insertedRow?.id || payload.id;
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_CREATED type=project id=${insertedId} status=${status}`);
+          return jsonResponse({
+            success: true,
+            id: insertedId,
+            isNew: true,
+            status,
+            verificationStatus,
+            message: 'Project created successfully in draft state',
+          }, 201);
+        }
+      }
+
       const dbPayload = mapToDbColumns(payload, tableName);
       dbPayload.publication_status = status;
       dbPayload.verification_status = verificationStatus;
@@ -1279,6 +1450,35 @@ async function handler(req: Request): Promise<Response> {
             updatedAt: new Date().toISOString(),
             versionNumber: (payload.versionNumber || 1) + 1,
             message: `Research program updated and transitioned to ${targetStatus}`,
+          });
+        }
+
+        // Specific Projects Handling
+        if (tableName === 'projects') {
+          const targetId = idOrSlug || payload.id;
+          const dbPayload = mapProjectToDb(payload, targetStatus, verificationStatus);
+          console.log(`[PROJECT DEBUG] PUT request received for project: targetId=${targetId}`);
+
+          const lookupRes = await querySupabaseRest(`projects?or=(id.eq.${encodeURIComponent(targetId)},slug.eq.${encodeURIComponent(targetId)})&limit=1`);
+          const recordId = lookupRes.ok && lookupRes.data && lookupRes.data[0]?.id ? lookupRes.data[0].id : targetId;
+
+          const updateRes = await querySupabaseRest(`projects?id=eq.${encodeURIComponent(recordId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(dbPayload),
+          });
+          if (!updateRes.ok) {
+            console.error(`[DATABASE_ERROR] Project update failed:`, updateRes.error);
+            return jsonResponse({ success: false, error: `Failed to update project in database: ${updateRes.error}` }, 500);
+          }
+          console.log(`[AUDIT] user=${user.email} action=CONTENT_UPDATED type=project id=${recordId} from=${currentStatus} to=${targetStatus}`);
+          return jsonResponse({
+            success: true,
+            id: recordId,
+            status: targetStatus,
+            verificationStatus,
+            updatedAt: new Date().toISOString(),
+            versionNumber: (payload.versionNumber || 1) + 1,
+            message: `Project record updated and transitioned to ${targetStatus}`,
           });
         }
 

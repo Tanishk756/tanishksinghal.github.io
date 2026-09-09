@@ -29,8 +29,8 @@ import { GitHubPublisherService } from '../functions/_shared/githubPublisher';
 import { buildNotificationEmail, sendContactNotificationEmail, escapeHtml } from '../functions/_shared/emailNotifier';
 import { parseExperienceDate, compareExperiencesDesc, sortExperiencesDesc } from '../../src/utils/experienceSorting';
 import { SKILL_CATEGORIES, isSkillCategory, SKILL_CATEGORY_METADATA } from '../../src/constants/skills';
-import { SkillSchema, ResearchSchema } from '../../src/cms/schemas';
-import { normalizeSkill, normalizeResearch } from '../../src/cms/publicContentClient';
+import { SkillSchema, ResearchSchema, ProjectSchema } from '../../src/cms/schemas';
+import { normalizeSkill, normalizeResearch, normalizeProject } from '../../src/cms/publicContentClient';
 
 // Helper to create test mock JWT tokens
 function createTestJwt(email: string, expiresInSec = 3600): string {
@@ -3012,6 +3012,121 @@ async function runSupabaseSecuritySuite() {
     normExplicitDate.dateRange === '2025 — 2026' &&
     renderedExplicit === 'Robotics & Autonomous Systems · 2025 — 2026',
     'Explicit date data in record is preserved and displayed accurately with separator'
+  );
+
+  console.log('\n--- DOMAIN 32: PROJECTS CMS CASE STUDY DATA CONTRACT & DB SCHEMA ---');
+
+  // Test 332: ProjectSchema validates complete case study model with architecture and software-tools
+  const validProjectRecord = {
+    id: 'proj-rop-1',
+    slug: 'robotics-operating-platform',
+    title: 'Robotics Operating Platform (ROP)',
+    tagline: 'Modular middleware orchestrating ROS 2 interface nodes and health monitoring.',
+    category: 'software-tools' as const,
+    subcategories: ['Python', 'ROS 2', 'ROS 2 Interfaces', 'System Health Monitoring', 'Robotics Middleware'],
+    status: 'in-progress' as const,
+    publicationStatus: 'draft' as const,
+    featured: false,
+    startDate: '2026',
+    role: 'Lead Systems Engineer',
+    overview: 'High-level engineering overview of the Robotics Operating Platform.',
+    problem: 'Heterogeneous node telemetry fragmentation across distributed robotics subsystems.',
+    objective: 'Standardize interface messaging, heartbeat monitoring, and deterministic failover.',
+    architecture: 'Layered publisher-subscriber topology with ROS 2 daemon watchdogs and QoS profiles.',
+    hardware: 'Raspberry Pi 5, Jetson Orin Nano, STM32 telemetry bridge',
+    software: 'ROS 2 Iron, Python 3.10, rclpy, custom msg/srv definitions',
+    algorithms: 'Heartbeat deadline monitor, priority message queue dispatch',
+    challenges: 'High bus contention during simultaneous multi-node telemetry bursts; resolved with QoS transient local and deadline callbacks.',
+    results: 'Sub-millisecond node discovery latency and deterministic watchdog heartbeats.',
+    githubUrl: 'https://github.com/Tanishk756/robotics-operating-platform',
+    demoUrl: 'https://tanishksinghal.in/projects/robotics-operating-platform',
+    paperUrl: 'https://tanishksinghal.in/docs/rop-spec.pdf',
+    verificationStatus: 'USER_PROVIDED' as const,
+    source: 'Author Self-Reported Specification',
+    lastVerified: '2026-09-09',
+  };
+  const projParseResult = ProjectSchema.safeParse(validProjectRecord);
+  assert(
+    projParseResult.success,
+    'ProjectSchema parses complete technical case study model with category software-tools and architecture field'
+  );
+
+  // Test 333: Migration 0010_projects_case_study_schema.sql defines all canonical columns
+  const migration0010Path = path.join(process.cwd(), 'supabase/migrations/0010_projects_case_study_schema.sql');
+  assert(fs.existsSync(migration0010Path), 'Migration 0010_projects_case_study_schema.sql exists');
+  const migration0010Src = fs.readFileSync(migration0010Path, 'utf8');
+  assert(
+    migration0010Src.includes('ADD COLUMN IF NOT EXISTS architecture TEXT') &&
+    migration0010Src.includes('ADD COLUMN IF NOT EXISTS hardware_specs JSONB') &&
+    migration0010Src.includes('ADD COLUMN IF NOT EXISTS software_stack JSONB') &&
+    migration0010Src.includes('ADD COLUMN IF NOT EXISTS problem TEXT') &&
+    migration0010Src.includes('ADD COLUMN IF NOT EXISTS objective TEXT') &&
+    migration0010Src.includes('ADD COLUMN IF NOT EXISTS category TEXT'),
+    'Migration 0010 defines all canonical engineering case study columns for projects'
+  );
+
+  // Test 334: Admin-content edge function contains mapProjectToDb and dedicated projects POST/PUT handlers
+  const adminContentSrc32 = fs.readFileSync(path.join(process.cwd(), 'supabase/functions/admin-content/index.ts'), 'utf8');
+  assert(
+    adminContentSrc32.includes('function mapProjectToDb') &&
+    adminContentSrc32.includes("if (tableName === 'projects')") &&
+    adminContentSrc32.includes('architecture: architecture') &&
+    adminContentSrc32.includes('hardware_specs: hardwareSpecs') &&
+    adminContentSrc32.includes('software_stack: softwareStack'),
+    'admin-content edge function contains dedicated mapProjectToDb and project routing'
+  );
+
+  // Test 335: normalizeProject maps database columns back to frontend ProjectCaseStudy representation
+  const dbProjectRow = {
+    id: 'f87a8f33-1b2c-4d5e-9f0a-112233445566',
+    slug: 'robotics-operating-platform',
+    title: 'Robotics Operating Platform (ROP)',
+    subtitle: 'Modular middleware orchestrating ROS 2 interface nodes.',
+    category: 'software-tools',
+    status: 'in-progress',
+    start_date: '2026',
+    timeframe: '2026',
+    role: 'Lead Systems Engineer',
+    overview: 'High-level engineering overview of ROP.',
+    problem: 'Heterogeneous node telemetry fragmentation.',
+    objective: 'Standardize interface messaging.',
+    architecture: 'Layered publisher-subscriber topology with ROS 2 daemon watchdogs.',
+    hardware_specs: ['Jetson Orin Nano', 'Raspberry Pi 5'],
+    software_stack: ['Python', 'ROS 2', 'ROS 2 Interfaces', 'System Health Monitoring', 'Robotics Middleware'],
+    algorithms: ['Heartbeat deadline monitor'],
+    challenges: [{ challenge: 'Bus contention', rootCause: 'Unbounded bursts', solution: 'QoS deadline', outcome: 'Deterministic' }],
+    results: { summary: ['Sub-millisecond discovery latency'] },
+    limitations: ['Requires Linux kernel 5.15+'],
+    future_work: ['DDS discovery optimization'],
+    github_url: 'https://github.com/Tanishk756/robotics-operating-platform',
+    demo_url: 'https://tanishksinghal.in/projects/robotics-operating-platform',
+    paper_url: 'https://tanishksinghal.in/docs/rop-spec.pdf',
+    publication_status: 'published',
+    verification_status: 'USER_PROVIDED',
+    last_verified: '2026-09-09T12:00:00.000Z',
+  };
+  const normalizedProj = normalizeProject(dbProjectRow);
+  assert(
+    normalizedProj.title === 'Robotics Operating Platform (ROP)' &&
+    normalizedProj.slug === 'robotics-operating-platform' &&
+    normalizedProj.category === 'software-tools' &&
+    normalizedProj.architectureDescription === 'Layered publisher-subscriber topology with ROS 2 daemon watchdogs.' &&
+    normalizedProj.hardwareStack?.includes('Jetson Orin Nano') &&
+    normalizedProj.softwareStack?.includes('ROS 2') &&
+    normalizedProj.githubUrl === 'https://github.com/Tanishk756/robotics-operating-platform' &&
+    normalizedProj.paperUrl === 'https://tanishksinghal.in/docs/rop-spec.pdf',
+    'normalizeProject cleanly maps database record to public ProjectCaseStudy'
+  );
+
+  // Test 336: AdminProjectEditorPage includes Software & Tools option and case study fields
+  const editorSrc = fs.readFileSync(path.join(process.cwd(), 'src/pages/admin/AdminProjectEditorPage.tsx'), 'utf8');
+  assert(
+    editorSrc.includes("value: 'software-tools'") &&
+    editorSrc.includes('Software & Tools') &&
+    editorSrc.includes('label="System Architecture & Subsystems"') &&
+    editorSrc.includes('label="Problem Statement"') &&
+    editorSrc.includes('label="Engineering Objective"'),
+    'AdminProjectEditorPage contains Software & Tools and all case study technical form fields'
   );
 
   // CLEANUP: Clean all temporary synthetic test records from memory

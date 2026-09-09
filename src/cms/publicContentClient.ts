@@ -71,10 +71,12 @@ export function normalizeStringArray(val: any): string[] {
 
 const mapProjectCategory = (cat: string) => {
   const l = (cat || '').toLowerCase();
+  if (l.includes('software') || l.includes('tool')) return 'software-tools';
   if (l.includes('robot')) return 'robotics';
   if (l.includes('autonom') || l.includes('path')) return 'autonomy';
   if (l.includes('uav') || l.includes('aero')) return 'uav-aerospace';
   if (l.includes('embed') || l.includes('firmware')) return 'embedded';
+  if (l.includes('space') || l.includes('sat')) return 'space-systems';
   if (l.includes('ai') || l.includes('machine') || l.includes('ml')) return 'ai-ml';
   return 'robotics';
 };
@@ -128,32 +130,78 @@ export function normalizeProfile(p: any): Profile | null {
 }
 
 export function normalizeProject(p: any): ProjectCaseStudy {
+  const parseResults = (res: any) => {
+    if (!res) return { summary: [] };
+    if (Array.isArray(res)) return { summary: res.filter(Boolean).map(String) };
+    if (typeof res === 'string') {
+      try {
+        const parsed = JSON.parse(res);
+        if (Array.isArray(parsed)) return { summary: parsed.filter(Boolean).map(String) };
+        if (typeof parsed === 'object' && parsed !== null) return parsed;
+      } catch {
+        return { summary: res.split('\n').map((s: string) => s.trim()).filter(Boolean) };
+      }
+    }
+    if (typeof res === 'object' && res !== null) {
+      return {
+        metrics: Array.isArray(res.metrics) ? res.metrics : undefined,
+        summary: Array.isArray(res.summary) ? res.summary : [],
+      };
+    }
+    return { summary: [] };
+  };
+
+  const parseChallenges = (ch: any) => {
+    if (!ch) return [];
+    if (Array.isArray(ch)) {
+      return ch.map((c: any) => typeof c === 'string' ? { challenge: c, rootCause: '', solution: '', outcome: '' } : c);
+    }
+    if (typeof ch === 'string') {
+      try {
+        const parsed = JSON.parse(ch);
+        if (Array.isArray(parsed)) {
+          return parsed.map((c: any) => typeof c === 'string' ? { challenge: c, rootCause: '', solution: '', outcome: '' } : c);
+        }
+      } catch {
+        return ch.split('\n').map((s: string) => s.trim()).filter(Boolean).map(line => ({
+          challenge: line,
+          rootCause: '',
+          solution: '',
+          outcome: '',
+        }));
+      }
+    }
+    return [];
+  };
+
   return {
     id: p.slug || p.id,
     slug: p.slug || p.id,
     title: p.title || 'Untitled Project',
-    tagline: p.subtitle || p.overview || p.title || '',
+    tagline: p.subtitle || p.tagline || p.overview || p.title || '',
     category: mapProjectCategory(p.category),
-    subcategories: normalizeStringArray(p.software_stack),
-    status: 'completed',
-    featured: p.featured || false,
-    startDate: p.timeframe || '2024',
-    role: p.role || 'Developer',
-    organization: p.organization || 'Open Source Robotics',
+    subcategories: normalizeStringArray(p.software_stack).length > 0 ? normalizeStringArray(p.software_stack) : normalizeStringArray(p.subcategories),
+    status: p.status || 'in-progress',
+    featured: Boolean(p.featured),
+    startDate: p.start_date || p.timeframe || p.startDate || '2026',
+    role: p.role || 'Lead Systems Engineer',
+    organization: p.organization || undefined,
     coverBadge: p.category || 'Robotics',
-    problem: p.problem || 'Autonomous tracking and control coordination in robotics.',
-    objective: p.overview || p.title || '',
+    problem: p.problem || p.overview || '',
+    objective: p.objective || p.solution || p.overview || p.title || '',
     approach: p.solution || p.overview || p.title || '',
     architectureDescription: p.architecture || '',
-    subsystems: p.subsystems || [],
-    hardwareStack: normalizeStringArray(p.hardware_specs),
-    softwareStack: normalizeStringArray(p.software_stack),
+    subsystems: Array.isArray(p.subsystems) ? p.subsystems : [],
+    hardwareStack: normalizeStringArray(p.hardware_specs).length > 0 ? normalizeStringArray(p.hardware_specs) : normalizeStringArray(p.hardwareStack),
+    softwareStack: normalizeStringArray(p.software_stack).length > 0 ? normalizeStringArray(p.software_stack) : normalizeStringArray(p.subcategories),
     algorithms: normalizeStringArray(p.algorithms),
-    challenges: (p.challenges || []).map((c: any) => typeof c === 'string' ? { challenge: c, rootCause: '', solution: '', outcome: '' } : c),
-    results: { summary: Array.isArray(p.results) ? p.results : [] },
-    lessonsLearned: normalizeStringArray(p.limitations),
-    futureWork: normalizeStringArray(p.future_work),
-    githubUrl: p.github_url || undefined,
+    challenges: parseChallenges(p.challenges),
+    results: parseResults(p.results),
+    lessonsLearned: normalizeStringArray(p.limitations).length > 0 ? normalizeStringArray(p.limitations) : normalizeStringArray(p.lessonsLearned),
+    futureWork: normalizeStringArray(p.future_work).length > 0 ? normalizeStringArray(p.future_work) : normalizeStringArray(p.futureWork),
+    githubUrl: p.github_url || p.githubUrl || undefined,
+    demoUrl: p.demo_url || p.demoUrl || undefined,
+    paperUrl: p.paper_url || p.docs_url || p.paperUrl || undefined,
     source: 'Supabase Canonical published record',
     verificationStatus: p.verification_status || 'USER_PROVIDED',
     lastVerified: p.last_verified || new Date().toISOString(),

@@ -352,6 +352,7 @@ export const AdminProjectEditorPage: React.FC = () => {
                 { value: 'embedded', label: 'Embedded & Firmware' },
                 { value: 'ai-ml', label: 'Artificial Intelligence & ML' },
                 { value: 'space-systems', label: 'CubeSat & Space Systems' },
+                { value: 'software-tools', label: 'Software & Tools' },
               ]}
               required
             />

@@ -112,7 +112,8 @@ export const ProjectDetailPage: React.FC = () => {
       </section>
 
       {/* 3. Subsystems Anatomy */}
-      {project.subsystems && project.subsystems.length > 0 && (
+      {/* 3. Subsystems Anatomy & Architecture */}
+      {(Boolean(project.architectureDescription) || (project.subsystems && project.subsystems.length > 0)) && (
         <section className="space-y-6">
           <div className="space-y-1 pb-4 border-b border-paper-400">
             <span className="text-xs font-mono uppercase text-stone-500 tracking-wider block">
@@ -129,7 +130,8 @@ export const ProjectDetailPage: React.FC = () => {
             </p>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+          {project.subsystems && project.subsystems.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
             {project.subsystems.map((sub, sIdx) => (
               <div key={sIdx} className="p-6 rounded-2xl bg-white border border-paper-400 shadow-xs space-y-3">
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-paper-100 text-ink-800 uppercase font-medium">
@@ -146,7 +148,8 @@ export const ProjectDetailPage: React.FC = () => {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          )}
         </section>
       )}
 
