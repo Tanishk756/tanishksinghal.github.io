@@ -38,7 +38,7 @@ export const AutonomyZone: React.FC<AutonomyZoneProps> = ({ reducedMotion = fals
     return new THREE.BufferGeometry().setFromPoints(pts);
   }, [pathPoints]);
 
-  const position: [number, number, number] = isMobile ? [-0.25, 0.1, -18.0] : [-0.8, 0, -18.0];
+  const position: [number, number, number] = isMobile ? [-0.25, 0.1, -28.0] : [-0.8, 0, -28.0];
   const scale: [number, number, number] = isMobile ? [0.95, 0.95, 0.95] : [1.15, 1.15, 1.15];
 
   return (
@@ -109,8 +109,8 @@ export const AutonomyZone: React.FC<AutonomyZoneProps> = ({ reducedMotion = fals
         )}
       </group>
 
-      {/* 7. AUTONOMY -> AEROSPACE ASCENSION DATUM (At Z: -4.8 / Global Z: -22.8) */}
-      <group position={[-0.2, 0, -4.8]}>
+      {/* 7. AUTONOMY -> AEROSPACE ASCENSION DATUM (At Z: -6.0 / Global Z: -34.0) */}
+      <group position={[-0.2, 0, -6.0]}>
         <mesh rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.5, 0.52, 32]} />
           <meshBasicMaterial color="#c2410c" transparent opacity={0.6} side={THREE.DoubleSide} />

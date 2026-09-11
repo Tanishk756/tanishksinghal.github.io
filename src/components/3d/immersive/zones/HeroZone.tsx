@@ -17,85 +17,69 @@ export const HeroZone: React.FC<HeroZoneProps> = ({ reducedMotion = false }) => 
   const { viewport } = useThree();
   const isMobile = viewport.width < 5.0;
 
-  const outerRingRef = useRef<THREE.Group>(null);
-  const midRingRef = useRef<THREE.Group>(null);
-  const innerRingRef = useRef<THREE.Group>(null);
+  const innerCoreRef = useRef<THREE.Group>(null);
+  const orbitalRingRef = useRef<THREE.Group>(null);
 
   useFrame((state) => {
     if (reducedMotion) return;
     const t = state.clock.elapsedTime;
-    if (outerRingRef.current) {
-      outerRingRef.current.rotation.y = t * 0.15;
-      outerRingRef.current.rotation.x = Math.sin(t * 0.2) * 0.1;
+    if (innerCoreRef.current) {
+      innerCoreRef.current.rotation.y = t * 0.12;
+      innerCoreRef.current.rotation.x = Math.sin(t * 0.15) * 0.06;
     }
-    if (midRingRef.current) {
-      midRingRef.current.rotation.z = -t * 0.22;
-      midRingRef.current.rotation.y = Math.cos(t * 0.25) * 0.15;
-    }
-    if (innerRingRef.current) {
-      innerRingRef.current.rotation.x = t * 0.3;
-      innerRingRef.current.rotation.z = Math.sin(t * 0.3) * 0.2;
+    if (orbitalRingRef.current) {
+      orbitalRingRef.current.rotation.z = -t * 0.18;
+      orbitalRingRef.current.rotation.y = Math.cos(t * 0.2) * 0.1;
     }
   });
 
-  const position: [number, number, number] = isMobile ? [0, 0.05, -0.2] : [0, 0.1, 0];
-  const scale: [number, number, number] = isMobile ? [0.65, 0.65, 0.65] : [0.82, 0.82, 0.82];
+  const position: [number, number, number] = isMobile ? [0, -0.25, 0] : [0, -0.2, 0];
+  const scale: [number, number, number] = isMobile ? [0.65, 0.65, 0.65] : [0.85, 0.85, 0.85];
 
   return (
     <group position={position} scale={scale}>
-      {/* 1. ORIGIN DATUM RING ON FLOOR */}
-      <group position={[0, -0.74, 0]}>
+      {/* 1. ARCHITECTURAL FLOOR DATUM RINGS */}
+      <group position={[0, 0.005, 0]}>
         <mesh rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[1.2, 1.22, 48]} />
+          <ringGeometry args={[1.5, 1.515, 64]} />
+          <meshBasicMaterial color="#e7e5e4" side={THREE.DoubleSide} />
+        </mesh>
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.9, 0.91, 48]} />
           <meshBasicMaterial color="#d6d3d1" side={THREE.DoubleSide} />
         </mesh>
         <mesh rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.6, 0.615, 36]} />
-          <meshBasicMaterial color="#c2410c" transparent opacity={0.6} side={THREE.DoubleSide} />
+          <ringGeometry args={[0.4, 0.41, 36]} />
+          <meshBasicMaterial color="#c2410c" transparent opacity={0.5} side={THREE.DoubleSide} />
         </mesh>
       </group>
 
-      {/* 2. MATHEMATICAL KINEMATIC GYROSCOPE SCULPTURE */}
-      <group ref={outerRingRef}>
-        <mesh>
-          <torusGeometry args={[1.05, 0.012, 16, 64]} />
-          <meshStandardMaterial color="#141517" roughness={0.3} metalness={0.8} />
-        </mesh>
-      </group>
+      {/* 2. LOW-PROFILE KINETIC ENGINEERING CORE */}
+      <group position={[0, 0.35, 0]}>
+        {/* Orbital Precision Ring */}
+        <group ref={orbitalRingRef}>
+          <mesh>
+            <torusGeometry args={[0.65, 0.008, 16, 48]} />
+            <meshStandardMaterial color="#57534e" roughness={0.3} metalness={0.7} />
+          </mesh>
+        </group>
 
-      <group ref={midRingRef}>
-        <mesh>
-          <torusGeometry args={[0.8, 0.01, 16, 64]} />
-          <meshStandardMaterial color="#57534e" roughness={0.3} metalness={0.7} />
-        </mesh>
-      </group>
+        {/* Inner Articulated Gimbal */}
+        <group ref={innerCoreRef}>
+          <mesh rotation={[Math.PI / 4, 0, 0]}>
+            <torusGeometry args={[0.45, 0.006, 16, 48]} />
+            <meshStandardMaterial color="#c2410c" roughness={0.2} metalness={0.6} />
+          </mesh>
+          <mesh>
+            <sphereGeometry args={[0.06, 24, 24]} />
+            <meshStandardMaterial color="#141517" roughness={0.2} metalness={0.9} />
+          </mesh>
+        </group>
 
-      <group ref={innerRingRef}>
-        <mesh>
-          <torusGeometry args={[0.55, 0.008, 16, 48]} />
-          <meshStandardMaterial color="#c2410c" roughness={0.2} metalness={0.6} />
-        </mesh>
-      </group>
-
-      {/* 3. CENTRAL MONUMENTAL NUCLEUS */}
-      <mesh position={[0, 0, 0]}>
-        <sphereGeometry args={[0.07, 24, 24]} />
-        <meshStandardMaterial color="#141517" roughness={0.2} metalness={0.9} />
-      </mesh>
-
-      {/* 4. COORDINATE AXIS CROSS-HAIRS */}
-      <group>
-        <mesh position={[0.65, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
-          <cylinderGeometry args={[0.004, 0.004, 0.35, 8]} />
-          <meshBasicMaterial color="#c2410c" />
-        </mesh>
-        <mesh position={[0, 0.65, 0]}>
-          <cylinderGeometry args={[0.004, 0.004, 0.35, 8]} />
-          <meshBasicMaterial color="#141517" />
-        </mesh>
-        <mesh position={[0, 0, 0.65]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.004, 0.004, 0.35, 8]} />
-          <meshBasicMaterial color="#78716c" />
+        {/* Ground Support Pedestal Mast */}
+        <mesh position={[0, -0.18, 0]}>
+          <cylinderGeometry args={[0.015, 0.03, 0.35, 16]} />
+          <meshStandardMaterial color="#292524" roughness={0.4} metalness={0.8} />
         </mesh>
       </group>
     </group>

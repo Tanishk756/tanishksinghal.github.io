@@ -1,43 +1,47 @@
 const SUPABASE_URL = 'https://fpjaijgbcdalrdgwbece.supabase.co';
 const ANON_KEY = 'sb_publishable_JesQqbucqA9FIKK04_1mrw_nnmkSq-S';
 
-const CANDIDATE_COLUMNS = [
+const PROBE_COLUMNS = [
   'id',
   'slug',
   'title',
-  'excerpt',
-  'body',
-  'content',
-  'cover_image',
-  'coverImage',
-  'tags',
+  'name',
+  'domain',
+  'research_area',
+  'area',
   'category',
-  'author',
-  'reading_time_minutes',
-  'reading_time',
-  'readingTime',
-  'seo_title',
-  'seo_description',
+  'summary',
+  'description',
+  'problem',
+  'problem_statement',
+  'research_question',
+  'methodology',
+  'algorithms',
+  'key_contribution',
+  'contributions',
+  'status',
+  'research_status',
+  'collaborators',
+  'co_authors',
   'display_order',
   'publication_status',
   'verification_status',
   'verification_notes',
+  'evidence_url',
+  'source',
+  'source_url',
   'last_verified',
-  'published_at',
-  'publishedDate',
-  'published_date',
-  'featured',
   'created_at',
   'updated_at',
 ];
 
 async function probeColumns() {
-  console.log('=== PROBING LIVE blog_posts COLUMNS ===');
+  console.log('=== PROBING LIVE research_programs COLUMNS ===');
   const existingCols: string[] = [];
   const missingCols: string[] = [];
 
-  for (const col of CANDIDATE_COLUMNS) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/blog_posts?select=${col}&limit=1`, {
+  for (const col of PROBE_COLUMNS) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/research_programs?select=${col}&limit=1`, {
       headers: {
         apikey: ANON_KEY,
         Authorization: `Bearer ${ANON_KEY}`,

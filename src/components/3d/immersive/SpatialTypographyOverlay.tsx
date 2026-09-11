@@ -57,13 +57,12 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
         >
           <span className="w-2.5 h-2.5 rounded-full bg-ink-900 group-hover:bg-terracotta transition-colors" />
           <span className="font-mono text-[11px] sm:text-xs font-semibold tracking-widest uppercase">
-            TANISHK SINGHAL // 3D WORLD
+            TANISHK SINGHAL
           </span>
         </Link>
 
-        {/* Status Coordinate */}
-        <div className="flex items-center gap-3 sm:gap-4 text-[10px] sm:text-[11px] font-mono text-stone-500">
-          <span className="hidden md:inline-block">SPATIAL INDEX // 01–06</span>
+        {/* Navigation Links */}
+        <div className="flex items-center gap-4 sm:gap-6 text-[11px] sm:text-xs font-mono text-stone-600">
           <Link
             to="/about"
             className="hover:text-ink-900 transition-colors uppercase tracking-wider underline underline-offset-4"
@@ -74,7 +73,19 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
             to="/projects"
             className="hover:text-ink-900 transition-colors uppercase tracking-wider underline underline-offset-4"
           >
-            Case Studies
+            Projects
+          </Link>
+          <Link
+            to="/research"
+            className="hover:text-ink-900 transition-colors uppercase tracking-wider underline underline-offset-4"
+          >
+            Research
+          </Link>
+          <Link
+            to="/contact"
+            className="hover:text-ink-900 transition-colors uppercase tracking-wider underline underline-offset-4"
+          >
+            Contact
           </Link>
         </div>
       </header>
@@ -82,34 +93,28 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
       {/* 2. DYNAMIC SPATIAL NARRATIVE SECTIONS */}
       <div className="relative w-full max-w-7xl mx-auto flex-1 flex items-center my-auto">
         
-        {/* --- ZONE 00: OPENING / MONUMENTAL SPATIAL LAB --- */}
+        {/* --- ZONE 00: OPENING HERO --- */}
         {heroOpacity > 0.01 && (
           <div
             style={{
               opacity: heroOpacity,
               transform: `translateY(${(1 - heroOpacity) * -20}px)`,
             }}
-            className="w-full flex flex-col items-center text-center space-y-2 sm:space-y-3 pointer-events-auto transition-transform duration-100 ease-out mt-2 sm:mt-6 mb-auto"
+            className="w-full flex flex-col items-center text-center space-y-3 pointer-events-auto transition-transform duration-100 ease-out mt-4 sm:mt-8 mb-auto"
           >
-            {/* Architectural Sub-header */}
-            <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-paper-200/90 backdrop-blur-md border border-paper-400 text-ink-700 text-[10px] sm:text-xs font-mono uppercase tracking-widest shadow-xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-terracotta animate-pulse" />
-              <span>SPATIAL LABORATORY // 00 DATUM</span>
-            </div>
-
-            {/* Monumental Headline */}
-            <div className="space-y-1 sm:space-y-1.5">
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-ink-900 uppercase leading-none">
+            {/* Monumental Headline with clean visual field */}
+            <div className="space-y-2">
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-display font-extrabold tracking-tight text-ink-900 uppercase leading-none">
                 TANISHK SINGHAL
               </h1>
-              <p className="text-xs sm:text-sm lg:text-base text-ink-700 font-serifDisplay italic tracking-normal max-w-xl mx-auto">
+              <p className="text-sm sm:text-base lg:text-lg text-ink-700 font-serifDisplay italic tracking-normal max-w-xl mx-auto">
                 Robotics Researcher & Autonomous Systems Engineer
               </p>
             </div>
           </div>
         )}
 
-        {/* --- ZONE 01: ROBOTICS STUDIO --- */}
+        {/* --- ZONE 01: ROBOTICS & MANIPULATION --- */}
         {roboticsOpacity > 0.01 && (
           <div
             style={{
@@ -118,8 +123,8 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
             }}
             className="space-y-3 sm:space-y-4 max-w-lg pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
           >
-            <span className="text-[11px] font-mono text-stone-500 uppercase tracking-widest block">
-              ZONE 01 // ROBOTICS & MANIPULATION
+            <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
+              Robotics & Manipulation
             </span>
             <h2 className="text-3xl sm:text-5xl font-display font-extrabold text-ink-900 tracking-tight leading-none">
               Kinematics & Articulation
@@ -132,7 +137,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
                 to="/projects"
                 className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-ink-900 hover:text-terracotta uppercase tracking-wider"
               >
-                <span>VIEW ROBOTICS MONOGRAPHS</span>
+                <span>View Robotics Projects</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -148,8 +153,8 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
             }}
             className="space-y-3 sm:space-y-4 max-w-lg ml-auto text-right pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
           >
-            <span className="text-[11px] font-mono text-stone-500 uppercase tracking-widest block">
-              ZONE 02 // AUTONOMOUS SYSTEMS
+            <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
+              Autonomous Systems
             </span>
             <h2 className="text-3xl sm:text-5xl font-display font-extrabold text-ink-900 tracking-tight leading-none">
               ROS 2 & Nav2 Autonomy
@@ -162,7 +167,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
                 to="/projects"
                 className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-ink-900 hover:text-terracotta uppercase tracking-wider"
               >
-                <span>EXPLORE AUTONOMY STACK</span>
+                <span>Explore Autonomy Work</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -178,21 +183,21 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
             }}
             className="space-y-3 sm:space-y-4 max-w-lg pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
           >
-            <span className="text-[11px] font-mono text-stone-500 uppercase tracking-widest block">
-              ZONE 03 // AEROSPACE & ORBITAL SYSTEMS
+            <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
+              Aerospace & Space Systems
             </span>
             <h2 className="text-3xl sm:text-5xl font-display font-extrabold text-ink-900 tracking-tight leading-none">
               UAV Avionics & CubeSat
             </h2>
             <p className="text-xs sm:text-sm text-ink-600 font-sans leading-relaxed">
-              Defensive counter-UAS aerial pursuit dynamics, high-rate flight controllers, and modular 3U CubeSat satellite power architecture and telemetry subsystems.
+              Autonomous quadrotor flight control, target pursuit kinematics, and modular 3U CubeSat satellite power architecture and telemetry subsystems.
             </p>
             <div className="pt-1">
               <Link
                 to="/projects"
                 className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-ink-900 hover:text-terracotta uppercase tracking-wider"
               >
-                <span>VIEW AEROSPACE CASE STUDIES</span>
+                <span>View Aerospace Case Studies</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -208,11 +213,11 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
             }}
             className="space-y-3 sm:space-y-4 max-w-lg mx-auto text-center pointer-events-auto transition-transform duration-100 ease-out"
           >
-            <span className="text-[11px] font-mono text-stone-500 uppercase tracking-widest block">
-              ZONE 04 // SYSTEMS & RESEARCH
+            <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
+              Systems Architecture & Research
             </span>
             <h2 className="text-3xl sm:text-5xl font-display font-extrabold text-ink-900 tracking-tight leading-none">
-              Multi-Modal Architecture
+              Perception-to-Action
             </h2>
             <p className="text-xs sm:text-sm text-ink-600 font-sans leading-relaxed max-w-md mx-auto">
               Perception-to-action sensor fusion, edge AI/ML tensor acceleration, and rigorous hardware-in-the-loop validation frameworks.
@@ -222,14 +227,14 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
                 to="/research"
                 className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-ink-900 hover:text-terracotta uppercase tracking-wider"
               >
-                <span>EXPLORE RESEARCH PROGRAMS</span>
+                <span>Explore Research Programs</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
             </div>
           </div>
         )}
 
-        {/* --- ZONE 05: SPATIAL PROJECTS INSTALLATIONS --- */}
+        {/* --- ZONE 05: FEATURED PROJECTS --- */}
         {projectsOpacity > 0.01 && (
           <div
             style={{
@@ -239,14 +244,14 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
             className="w-full pointer-events-auto flex flex-col items-center text-center space-y-4 sm:space-y-6 transition-transform duration-100 ease-out"
           >
             <div className="space-y-1 sm:space-y-2">
-              <span className="text-[11px] font-mono text-stone-500 uppercase tracking-widest block">
-                ZONE 05 // SPATIAL PROJECT INSTALLATIONS
+              <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
+                Featured Engineering Work
               </span>
               <h2 className="text-2xl sm:text-4xl lg:text-5xl font-display font-extrabold text-ink-900 tracking-tight">
                 Authentic Case Studies
               </h2>
               <p className="text-[11px] sm:text-xs font-mono text-stone-500">
-                HOVER OR SELECT A SPATIAL ARCHETYPE TO INSPECT
+                Select an engineering project to inspect details
               </p>
             </div>
 
@@ -274,7 +279,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
                     to={`/projects/${activeProject.slug}`}
                     className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-ink-900 hover:text-terracotta uppercase tracking-wider"
                   >
-                    <span>VIEW CASE STUDY</span>
+                    <span>View Case Study</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                   {onClearSelectedProject && selectedProject && (
@@ -291,7 +296,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
           </div>
         )}
 
-        {/* --- ZONE 06: TRANSMISSION & CONTACT --- */}
+        {/* --- ZONE 06: CONTACT & COLLABORATION --- */}
         {contactOpacity > 0.01 && (
           <div
             style={{
@@ -301,7 +306,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
             className="space-y-4 sm:space-y-6 max-w-lg mx-auto text-center pointer-events-auto transition-transform duration-100 ease-out"
           >
             <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-bold">
-              ZONE 06 // TRANSMISSION & DIRECTORY
+              Contact & Inquiries
             </span>
             <h2 className="text-3xl sm:text-5xl font-display font-extrabold text-ink-900 tracking-tight leading-none">
               Initiate Collaboration
@@ -317,7 +322,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-ink-900 text-paper-100 hover:bg-ink-800 text-xs font-sans font-semibold tracking-wide uppercase transition-all shadow-sm"
               >
                 <Mail className="w-3.5 h-3.5" />
-                <span>TRANSMIT MESSAGE</span>
+                <span>Send Message</span>
               </Link>
               <a
                 href="https://github.com/Tanishk756"
@@ -354,18 +359,18 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
       <footer className="flex items-center justify-between w-full max-w-7xl mx-auto pointer-events-auto text-[10px] sm:text-[11px] font-mono text-stone-500">
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-terracotta animate-ping" />
-          <span>PROGRESS: {Math.round(scrollProgress * 100)}%</span>
+          <span>PORTFOLIO PROGRESS: {Math.round(scrollProgress * 100)}%</span>
         </div>
 
         {scrollProgress < 0.1 && (
           <div className="flex items-center gap-1.5 text-ink-900 animate-bounce">
-            <span className="uppercase tracking-widest text-[10px] font-bold">SCROLL TO EXPLORE WORLD</span>
+            <span className="uppercase tracking-widest text-[10px] font-bold">Scroll to Explore</span>
             <span>↓</span>
           </div>
         )}
 
         <div className="hidden sm:flex items-center gap-4">
-          <span>LAT 28.61° N // LON 77.20° E</span>
+          <span>New Delhi, India</span>
         </div>
       </footer>
     </div>

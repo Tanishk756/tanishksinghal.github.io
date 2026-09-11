@@ -15,38 +15,48 @@ export const SpatialNavIndex: React.FC<SpatialNavIndexProps> = ({
   scrollProgress,
   onJumpToZone,
 }) => {
+  const navZones = [
+    { label: 'Robotics', index: 1 },
+    { label: 'Autonomy', index: 2 },
+    { label: 'Aerospace', index: 3 },
+    { label: 'Research', index: 4 },
+    { label: 'Projects', index: 5 },
+    { label: 'Contact', index: 6 },
+  ];
+
   return (
     <nav
-      aria-label="3D Spatial Zone Index"
+      aria-label="Portfolio Navigation Index"
       className="fixed right-6 top-1/2 -translate-y-1/2 z-20 hidden md:flex flex-col items-end gap-3 pointer-events-auto select-none"
     >
-      {WORLD_ZONES.map((zone, idx) => {
+      {navZones.map(({ label, index }) => {
+        const zone = WORLD_ZONES[index];
         const isActive =
           scrollProgress >= zone.progressStart && scrollProgress <= zone.progressEnd;
 
         return (
           <button
             key={zone.id}
-            onClick={() => onJumpToZone(idx)}
-            className="group flex items-center gap-3 text-right py-1 transition-all"
+            onClick={() => onJumpToZone(index)}
+            className="group flex items-center gap-2.5 text-right py-1 transition-all"
           >
             {/* Zone Label */}
             <span
-              className={`text-[10px] font-mono uppercase tracking-widest transition-colors ${
+              className={`text-[11px] font-mono tracking-wider transition-colors ${
                 isActive
                   ? 'text-ink-900 font-bold opacity-100'
-                  : 'text-stone-400 group-hover:text-ink-700 opacity-60 group-hover:opacity-100'
+                  : 'text-stone-400 group-hover:text-ink-800 opacity-60 group-hover:opacity-100'
               }`}
             >
-              {zone.index} // {zone.id.toUpperCase()}
+              0{index} {label}
             </span>
 
             {/* Indicator Tick */}
             <span
               className={`h-px transition-all ${
                 isActive
-                  ? 'w-6 bg-terracotta'
-                  : 'w-2 bg-stone-300 group-hover:w-4 group-hover:bg-ink-900'
+                  ? 'w-5 bg-terracotta'
+                  : 'w-2 bg-stone-300 group-hover:w-3.5 group-hover:bg-ink-800'
               }`}
             />
           </button>

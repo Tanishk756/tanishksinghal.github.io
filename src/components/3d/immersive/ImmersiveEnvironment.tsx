@@ -11,22 +11,22 @@ import { useThree } from '@react-three/fiber';
 export const ImmersiveEnvironment: React.FC = () => {
   const { scene } = useThree();
 
-  // Set background and atmospheric fog for continuous depth
+  // Set background and atmospheric fog for continuous depth and calm horizon
   useMemo(() => {
     scene.background = new THREE.Color('#fbfaf7');
-    scene.fog = new THREE.FogExp2('#fbfaf7', 0.032);
+    scene.fog = new THREE.FogExp2('#fbfaf7', 0.045);
   }, [scene]);
 
   return (
     <group>
       {/* 1. STUDIO LIGHTING RIG */}
-      <ambientLight intensity={1.2} color="#ffffff" />
+      <ambientLight intensity={1.1} color="#ffffff" />
       
       {/* Warm Key Light */}
       <directionalLight
-        position={[10, 18, 12]}
-        intensity={1.5}
-        color="#fffaf2"
+        position={[8, 16, 10]}
+        intensity={1.4}
+        color="#fffbf5"
         castShadow
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
@@ -35,46 +35,46 @@ export const ImmersiveEnvironment: React.FC = () => {
       
       {/* Cool Slate Fill Light */}
       <directionalLight
-        position={[-12, 10, -20]}
-        intensity={0.7}
-        color="#e2e8f0"
+        position={[-10, 8, -20]}
+        intensity={0.6}
+        color="#f1f5f9"
       />
 
       {/* Under-Glow Bounce Light */}
       <directionalLight
-        position={[0, -5, -30]}
-        intensity={0.3}
-        color="#f1f5f9"
+        position={[0, -4, -30]}
+        intensity={0.25}
+        color="#f8fafc"
       />
 
-      {/* 2. INFINITE ARCHITECTURAL FLOOR GRID */}
-      <group position={[0, -0.01, -30]}>
+      {/* 2. RESTRAINED ARCHITECTURAL FLOOR GRID */}
+      <group position={[0, -0.01, -40]}>
         <gridHelper
-          args={[100, 100, '#c2410c', '#e7e5e4']}
+          args={[160, 80, '#e2ded7', '#f1ede6']}
           position={[0, 0, 0]}
         />
       </group>
 
-      {/* 3. CARDINAL SPATIAL GUIDES & AXIS MARKERS */}
+      {/* 3. CARDINAL SPATIAL GUIDES & LATITUDE MARKERS */}
       <group position={[0, 0, 0]}>
-        {/* Longitudinal Centerline */}
-        <mesh position={[0, 0.001, -30]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.04, 80]} />
-          <meshBasicMaterial color="#d6d3d1" transparent opacity={0.4} />
+        {/* Longitudinal Architectural Centerline */}
+        <mesh position={[0, 0.001, -45]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[0.02, 100]} />
+          <meshBasicMaterial color="#d6d3d1" transparent opacity={0.35} />
         </mesh>
 
-        {/* Zone Latitude Dividers */}
-        {[-4, -13, -23, -33, -44, -56].map((z, i) => (
+        {/* Quiet Zone Latitude Dividers */}
+        {[-7, -21, -35, -49, -63, -77].map((z, i) => (
           <group key={i} position={[0, 0.002, z]}>
             <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[18, 0.02]} />
-              <meshBasicMaterial color="#e7e5e4" transparent opacity={0.6} />
+              <planeGeometry args={[14, 0.015]} />
+              <meshBasicMaterial color="#e7e5e4" transparent opacity={0.4} />
             </mesh>
             {/* Coordinate Marker Dots */}
-            {[-6, -3, 0, 3, 6].map((x, j) => (
-              <mesh key={j} position={[x, 0.005, 0]}>
-                <circleGeometry args={[0.03, 12]} />
-                <meshBasicMaterial color={j === 2 ? '#c2410c' : '#a8a29e'} />
+            {[-4, 0, 4].map((x, j) => (
+              <mesh key={j} position={[x, 0.004, 0]}>
+                <circleGeometry args={[0.02, 10]} />
+                <meshBasicMaterial color={j === 1 ? '#c2410c' : '#d6d3d1'} transparent opacity={0.6} />
               </mesh>
             ))}
           </group>

@@ -50,7 +50,7 @@ export const ProjectsZone: React.FC<ProjectsZoneProps> = ({
   });
 
   return (
-    <group position={[0.0, 0.0, -50.0]}>
+    <group position={[0.0, 0.0, -70.0]}>
       {/* Installation Boundary Ring on Floor */}
       <mesh position={[0, 0.003, -0.5]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[5.2, 5.22, 64]} />

@@ -13,7 +13,7 @@ interface ResearchZoneProps {
  */
 export const ResearchZone: React.FC<ResearchZoneProps> = ({ reducedMotion = false }) => {
   return (
-    <group position={[-1.0, 0.6, -38.0]}>
+    <group position={[-1.0, 0.6, -56.0]}>
       {/* 1. DISTRIBUTED SYSTEMS PIPELINE NODE GRAPH */}
       <group position={[-0.3, 0.3, 0]} scale={[1.1, 1.1, 1.1]}>
         <SystemsPipelineArchetype reducedMotion={reducedMotion} />

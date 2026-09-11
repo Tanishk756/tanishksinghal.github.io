@@ -34,7 +34,7 @@ export const ImmersiveCanvas: React.FC<ImmersiveCanvasProps> = ({
     <div className="fixed inset-0 w-full h-full pointer-events-auto z-0 select-none">
       <Canvas
         shadows
-        camera={{ position: [0, 1.8, 5.0], fov: 38, near: 0.1, far: 50 }}
+        camera={{ position: [0, 1.25, 4.5], fov: 38, near: 0.1, far: 120 }}
         dpr={typeof window !== 'undefined' ? Math.min(window.devicePixelRatio, 1.5) : 1}
         gl={{
           antialias: true,

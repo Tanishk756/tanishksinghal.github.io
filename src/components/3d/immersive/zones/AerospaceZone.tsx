@@ -33,7 +33,7 @@ export const AerospaceZone: React.FC<AerospaceZoneProps> = ({ reducedMotion = fa
   });
 
   return (
-    <group position={[0.8, 0, -28.0]}>
+    <group position={[0.8, 0, -42.0]}>
       {/* 1. HIGH-ALTITUDE UAV DRONE AIRFRAME (MID-AIR SPATIAL LAYER) */}
       <group ref={uavRef} position={[-0.4, 1.25, 0.4]} scale={[1.2, 1.2, 1.2]}>
         <UAVDroneArchetype reducedMotion={reducedMotion} />

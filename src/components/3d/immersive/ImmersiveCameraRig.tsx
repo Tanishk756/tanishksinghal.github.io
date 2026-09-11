@@ -15,8 +15,8 @@ export const ImmersiveCameraRig: React.FC<ImmersiveCameraRigProps> = ({
   reducedMotion = false,
 }) => {
   const { camera } = useThree();
-  const currentPos = useRef(new THREE.Vector3(0, 1.8, 5.0));
-  const currentTarget = useRef(new THREE.Vector3(0, 0.6, 0.0));
+  const currentPos = useRef(new THREE.Vector3(0, 1.25, 4.5));
+  const currentTarget = useRef(new THREE.Vector3(0, 0.35, 0.0));
   const targetPos = useRef(new THREE.Vector3());
   const targetLook = useRef(new THREE.Vector3());
 

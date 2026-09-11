@@ -33,20 +33,20 @@ export const RoboticsZone: React.FC<RoboticsZoneProps> = ({ reducedMotion = fals
     return new THREE.BufferGeometry().setFromPoints(curvePoints);
   }, [curvePoints]);
 
-  // Transitional ground corridor spline connecting Zone 01 (Robotics Z: -8) -> Zone 02 (Autonomy Z: -18)
+  // Transitional ground corridor spline connecting Zone 01 (Robotics Z: -14) -> Zone 02 (Autonomy Z: -28)
   const transitionPathGeo = useMemo(() => {
     const pts = [
-      new THREE.Vector3(0, 0.008, 0),        // At base of Robotic Arm
-      new THREE.Vector3(-0.4, 0.008, -2.5),  // Arcing outward
-      new THREE.Vector3(-1.2, 0.008, -5.5),  // Traversing boundary
-      new THREE.Vector3(-1.8, 0.008, -8.0),  // Merging with rover waypoint corridor
-      new THREE.Vector3(-2.0, 0.008, -10.0), // Linking directly to Wheeled Robot origin
+      new THREE.Vector3(0, 0.008, 0),        // At base of Robotic Arm (Z: -14)
+      new THREE.Vector3(-0.5, 0.008, -3.5),  // Arcing outward
+      new THREE.Vector3(-1.2, 0.008, -7.5),  // Traversing boundary
+      new THREE.Vector3(-1.5, 0.008, -11.0), // Merging with rover waypoint corridor
+      new THREE.Vector3(-1.6, 0.008, -14.0), // Linking directly to Wheeled Robot origin (Z: -28)
     ];
     const curve = new THREE.CatmullRomCurve3(pts);
     return new THREE.BufferGeometry().setFromPoints(curve.getPoints(50));
   }, []);
 
-  const position: [number, number, number] = isMobile ? [0.25, 0.1, -8.0] : [0.8, 0, -8.0];
+  const position: [number, number, number] = isMobile ? [0.25, 0.1, -14.0] : [0.8, 0, -14.0];
   const scale: [number, number, number] = isMobile ? [0.95, 0.95, 0.95] : [1.15, 1.15, 1.15];
 
   return (

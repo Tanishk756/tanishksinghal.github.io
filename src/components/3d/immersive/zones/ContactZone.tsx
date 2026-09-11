@@ -24,7 +24,7 @@ export const ContactZone: React.FC<ContactZoneProps> = ({ reducedMotion = false 
   });
 
   return (
-    <group position={[0.0, 0.0, -62.0]}>
+    <group position={[0.0, 0.0, -84.0]}>
       {/* 1. TRANSMISSION BASE & DATUM FLOOR RING */}
       <mesh position={[0, 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[1.5, 1.52, 48]} />
