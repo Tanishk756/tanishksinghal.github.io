@@ -121,7 +121,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: roboticsOpacity,
               transform: `translateY(${(1 - roboticsOpacity) * 20}px)`,
             }}
-            className="space-y-3 sm:space-y-4 max-w-md pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
+            className="space-y-3 sm:space-y-4 max-w-md pointer-events-auto transition-transform duration-100 ease-out max-lg:bg-white/90 max-lg:backdrop-blur-md max-lg:p-5 max-lg:rounded-2xl max-lg:border max-lg:border-paper-300/60 max-lg:shadow-xs"
           >
             <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
               Robotics & Manipulation
@@ -151,7 +151,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: autonomyOpacity,
               transform: `translateY(${(1 - autonomyOpacity) * 20}px)`,
             }}
-            className="space-y-3 sm:space-y-4 max-w-md ml-auto mr-4 sm:mr-24 text-right pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
+            className="space-y-3 sm:space-y-4 max-w-md ml-auto mr-0 lg:mr-24 text-right pointer-events-auto transition-transform duration-100 ease-out max-lg:bg-white/90 max-lg:backdrop-blur-md max-lg:p-5 max-lg:rounded-2xl max-lg:border max-lg:border-paper-300/60 max-lg:shadow-xs"
           >
             <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
               Autonomous Systems
@@ -181,7 +181,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: aerospaceOpacity,
               transform: `translateY(${(1 - aerospaceOpacity) * 20}px)`,
             }}
-            className="space-y-3 sm:space-y-4 max-w-md pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
+            className="space-y-3 sm:space-y-4 max-w-md pointer-events-auto transition-transform duration-100 ease-out max-lg:bg-white/90 max-lg:backdrop-blur-md max-lg:p-5 max-lg:rounded-2xl max-lg:border max-lg:border-paper-300/60 max-lg:shadow-xs"
           >
             <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
               Aerospace & Space Systems
@@ -211,7 +211,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: researchOpacity,
               transform: `translateY(${(1 - researchOpacity) * 20}px)`,
             }}
-            className="space-y-3 sm:space-y-4 max-w-md ml-auto mr-4 sm:mr-24 text-right pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
+            className="space-y-3 sm:space-y-4 max-w-md ml-auto mr-0 lg:mr-24 text-right pointer-events-auto transition-transform duration-100 ease-out max-lg:bg-white/90 max-lg:backdrop-blur-md max-lg:p-5 max-lg:rounded-2xl max-lg:border max-lg:border-paper-300/60 max-lg:shadow-xs"
           >
             <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
               Systems Architecture & Research
