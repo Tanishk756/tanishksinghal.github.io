@@ -64,11 +64,13 @@ export const ProjectsZone: React.FC<ProjectsZoneProps> = ({
 
         const handlePointerOver = (e: any) => {
           e.stopPropagation();
+          document.body.style.cursor = 'pointer';
           setHoveredSlug(project.slug);
           if (onHoverProject) onHoverProject(project);
         };
 
         const handlePointerOut = () => {
+          document.body.style.cursor = 'auto';
           setHoveredSlug(null);
           if (onHoverProject) onHoverProject(null);
         };
