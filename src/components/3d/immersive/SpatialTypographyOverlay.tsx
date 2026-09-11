@@ -21,7 +21,7 @@ interface SpatialTypographyOverlayProps {
  */
 export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> = ({
   scrollProgress,
-  profile,
+  profile: _profile,
   hoveredProject = null,
   selectedProject = null,
   onClearSelectedProject,
