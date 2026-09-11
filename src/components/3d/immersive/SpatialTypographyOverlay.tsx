@@ -98,19 +98,14 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
             </div>
 
             {/* Monumental Headline */}
-            <div className="space-y-0.5 sm:space-y-1">
+            <div className="space-y-1 sm:space-y-1.5">
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-ink-900 uppercase leading-none">
                 TANISHK SINGHAL
               </h1>
-              <p className="text-xs sm:text-base lg:text-lg text-ink-700 font-serifDisplay italic tracking-normal max-w-xl mx-auto">
+              <p className="text-xs sm:text-sm lg:text-base text-ink-700 font-serifDisplay italic tracking-normal max-w-xl mx-auto">
                 Robotics Researcher & Autonomous Systems Engineer
               </p>
             </div>
-
-            {/* Engineering Mission Statement */}
-            <p className="text-[11px] sm:text-xs text-ink-600 font-sans max-w-md mx-auto leading-relaxed px-4 hidden sm:block">
-              {profile?.headline || 'Autonomous mobile navigation, closed-loop ROS 2 kinematics, embedded firmware architectures, and applied perception.'}
-            </p>
           </div>
         )}
 
