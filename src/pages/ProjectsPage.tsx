@@ -1,11 +1,7 @@
-import React, { Suspense, lazy } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { usePublicContent } from '../context/PublicContentContext';
 import { ArrowRight, ArrowUpRight, FolderGit2, LoaderCircle } from 'lucide-react';
-
-const LazyProjectHangar = lazy(() =>
-  import('../components/3d/projects/ProjectHangar').then((m) => ({ default: m.ProjectHangar }))
-);
 
 export const ProjectsPage: React.FC = () => {
   const { projects, isLoading, error } = usePublicContent();
@@ -45,24 +41,6 @@ export const ProjectsPage: React.FC = () => {
           Detailed technical monographs formulating problem statements, subsystem topologies, root-cause resolutions, and verified implementations.
         </p>
       </div>
-
-      {/* 3D Interactive Project Hangar Discovery Layer */}
-      {projects.length > 0 && (
-        <section aria-label="Interactive 3D Project Discovery Hangar" className="w-full">
-          <Suspense
-            fallback={
-              <div className="w-full min-h-[460px] sm:min-h-[520px] rounded-3xl bg-white border border-paper-400 p-8 flex flex-col items-center justify-center space-y-3">
-                <LoaderCircle className="w-6 h-6 animate-spin text-stone-400" />
-                <span className="text-xs font-mono text-stone-500 uppercase tracking-wider">
-                  INITIALIZING 3D PROJECT WORKSPACE...
-                </span>
-              </div>
-            }
-          >
-            <LazyProjectHangar projects={projects} />
-          </Suspense>
-        </section>
-      )}
 
       {/* Case Studies Rhythmic Ledger */}
       <div className="space-y-12">
