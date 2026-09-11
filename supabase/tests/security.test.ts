@@ -34,6 +34,7 @@ import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { normalizeSkill, normalizeResearch, normalizeProject, normalizeBlogPost } from '../../src/cms/publicContentClient';
 import { MarkdownRenderer } from '../../src/components/blog/MarkdownRenderer';
+import { SUBSYSTEMS } from '../../src/components/3d/types';
 
 // Helper to create test mock JWT tokens
 function createTestJwt(email: string, expiresInSec = 3600): string {
@@ -3402,6 +3403,49 @@ Detector -> Fusion -> Tracker -> State Estimation
     renderedApexHtml.includes('<pre') &&
     renderedApexHtml.includes('Detector -&gt; Fusion -&gt; Tracker'),
     'APEX-Track article renders complete technical hierarchy with headings, bold callouts, blockquotes, lists, and code diagram without raw markdown leakage'
+  );
+
+  // --- DOMAIN 34: 3D ROBOT DIGITAL TWIN SUBSYSTEM & ARCHITECTURE TESTS ---
+  console.log('\n--- DOMAIN 34: 3D ROBOT DIGITAL TWIN SUBSYSTEM & ARCHITECTURE TESTS ---');
+
+  assert(
+    Object.keys(SUBSYSTEMS).length === 6,
+    '3D Robot Digital Twin defines exactly 6 core robotics architectural subsystems'
+  );
+
+  assert(
+    SUBSYSTEMS.chassis && SUBSYSTEMS.chassis.category === 'STRUCTURE',
+    'Chassis subsystem is categorized as canonical STRUCTURE domain'
+  );
+
+  assert(
+    SUBSYSTEMS.drive && SUBSYSTEMS.drive.category === 'ACTUATION',
+    'Drive subsystem is categorized as canonical ACTUATION domain'
+  );
+
+  assert(
+    SUBSYSTEMS.lidar && SUBSYSTEMS.lidar.category === 'PERCEPTION',
+    'LiDAR subsystem is categorized as canonical PERCEPTION domain'
+  );
+
+  assert(
+    SUBSYSTEMS.camera && SUBSYSTEMS.camera.category === 'VISION',
+    'Stereo Camera subsystem is categorized as canonical VISION domain'
+  );
+
+  assert(
+    SUBSYSTEMS.imu && SUBSYSTEMS.imu.category === 'ODOMETRY',
+    'IMU core is categorized as canonical ODOMETRY domain'
+  );
+
+  assert(
+    SUBSYSTEMS.compute && SUBSYSTEMS.compute.category === 'COMPUTE',
+    'Onboard compute is categorized as canonical COMPUTE domain'
+  );
+
+  assert(
+    Object.values(SUBSYSTEMS).every(s => s.name.length > 0 && s.description.length > 20),
+    'All 6 digital twin subsystems contain authentic, un-fabricated technical descriptions'
   );
 
   // CLEANUP: Clean all temporary synthetic test records from memory

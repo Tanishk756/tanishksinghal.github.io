@@ -2,7 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { Navigation } from 'lucide-react';
 
 const LazyRobotDigitalTwin = lazy(() =>
-  import('./RobotDigitalTwin').then(module => ({ default: module.RobotDigitalTwin }))
+  import('../3d/RobotDigitalTwin').then(module => ({ default: module.RobotDigitalTwin }))
 );
 
 const CenterpieceFallback: React.FC<{ className?: string }> = ({ className = '' }) => (
