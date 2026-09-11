@@ -42,7 +42,7 @@ export const AutonomyZone: React.FC<AutonomyZoneProps> = ({ reducedMotion = fals
   const scale: [number, number, number] = isMobile ? [0.85, 0.85, 0.85] : [1.15, 1.15, 1.15];
 
   return (
-    <group position={position}>
+    <group position={position} scale={scale}>
       {/* 1. AUTONOMOUS MOBILE ROBOT (ROS 2 PLATFORM) */}
       <group position={[0, 0, 0]} rotation={[0, Math.PI / 8, 0]} scale={[1.15, 1.15, 1.15]}>
         <WheeledRobotArchetype reducedMotion={reducedMotion} />

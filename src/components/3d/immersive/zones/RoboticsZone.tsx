@@ -50,7 +50,7 @@ export const RoboticsZone: React.FC<RoboticsZoneProps> = ({ reducedMotion = fals
   const scale: [number, number, number] = isMobile ? [0.85, 0.85, 0.85] : [1.15, 1.15, 1.15];
 
   return (
-    <group position={position}>
+    <group position={position} scale={scale}>
       {/* 1. WORKSPACE WORK-ENVELOPE FLOOR MARKING */}
       <mesh position={[0, 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.75, 0.77, 36]} />
