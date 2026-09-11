@@ -53,8 +53,9 @@ async function verifyLiveProduction() {
       }
     });
 
-    console.log('Navigating to https://tanishksinghal.in/ ...');
-    await page.goto('https://tanishksinghal.in/', { waitUntil: 'networkidle', timeout: 45000 });
+    const targetUrl = `https://tanishksinghal.in/?_t=${Date.now()}`;
+    console.log(`Navigating to ${targetUrl} ...`);
+    await page.goto(targetUrl, { waitUntil: 'networkidle', timeout: 45000 });
     await page.waitForTimeout(3000);
 
     for (const milestone of zoneMilestones) {

@@ -211,7 +211,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: researchOpacity,
               transform: `translateY(${(1 - researchOpacity) * 20}px)`,
             }}
-            className="space-y-3 sm:space-y-4 max-w-md mx-auto text-center pointer-events-auto transition-transform duration-100 ease-out"
+            className="space-y-3 sm:space-y-4 max-w-md ml-auto mr-0 sm:mr-16 text-right pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
           >
             <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
               Systems Architecture & Research
@@ -219,10 +219,10 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
             <h2 className="text-3xl sm:text-5xl font-display font-extrabold text-ink-900 tracking-tight leading-none">
               Perception-to-Action
             </h2>
-            <p className="text-xs sm:text-sm text-ink-600 font-sans leading-relaxed max-w-md mx-auto">
+            <p className="text-xs sm:text-sm text-ink-600 font-sans leading-relaxed">
               Perception-to-action sensor fusion, edge AI/ML tensor acceleration, and rigorous hardware-in-the-loop validation frameworks.
             </p>
-            <div className="pt-1 flex justify-center">
+            <div className="pt-1 flex justify-end">
               <Link
                 to="/research"
                 className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-ink-900 hover:text-terracotta uppercase tracking-wider"
