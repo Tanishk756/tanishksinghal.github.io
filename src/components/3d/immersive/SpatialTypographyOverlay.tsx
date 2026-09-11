@@ -116,7 +116,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: roboticsOpacity,
               transform: `translateY(${(1 - roboticsOpacity) * 20}px)`,
             }}
-            className="space-y-3 sm:space-y-4 max-w-lg pointer-events-auto transition-transform duration-100 ease-out"
+            className="space-y-3 sm:space-y-4 max-w-lg pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
           >
             <span className="text-[11px] font-mono text-stone-500 uppercase tracking-widest block">
               ZONE 01 // ROBOTICS & MANIPULATION
@@ -146,7 +146,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: autonomyOpacity,
               transform: `translateY(${(1 - autonomyOpacity) * 20}px)`,
             }}
-            className="space-y-3 sm:space-y-4 max-w-lg ml-auto text-right pointer-events-auto transition-transform duration-100 ease-out"
+            className="space-y-3 sm:space-y-4 max-w-lg ml-auto text-right pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
           >
             <span className="text-[11px] font-mono text-stone-500 uppercase tracking-widest block">
               ZONE 02 // AUTONOMOUS SYSTEMS
@@ -176,7 +176,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: aerospaceOpacity,
               transform: `translateY(${(1 - aerospaceOpacity) * 20}px)`,
             }}
-            className="space-y-3 sm:space-y-4 max-w-lg pointer-events-auto transition-transform duration-100 ease-out"
+            className="space-y-3 sm:space-y-4 max-w-lg pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
           >
             <span className="text-[11px] font-mono text-stone-500 uppercase tracking-widest block">
               ZONE 03 // AEROSPACE & ORBITAL SYSTEMS
