@@ -11,10 +11,11 @@ import { useThree } from '@react-three/fiber';
 export const ImmersiveEnvironment: React.FC = () => {
   const { scene } = useThree();
 
-  // Set background and atmospheric fog for continuous depth and calm horizon
+  // Linear atmospheric studio fog: near 4 units, far 17 units.
+  // Perfectly isolates the active zone while smoothly dissolving distant zones into background.
   useMemo(() => {
     scene.background = new THREE.Color('#fbfaf7');
-    scene.fog = new THREE.FogExp2('#fbfaf7', 0.045);
+    scene.fog = new THREE.Fog('#fbfaf7', 4, 18);
   }, [scene]);
 
   return (

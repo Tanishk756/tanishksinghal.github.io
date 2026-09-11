@@ -52,20 +52,20 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
       <header className="flex items-center justify-between w-full max-w-7xl mx-auto pointer-events-auto">
         <Link
           to="/"
-          className="group flex items-center gap-2.5 text-ink-900 hover:text-ink-600 transition-colors"
+          className="group flex items-center gap-2 text-ink-900 hover:text-ink-600 transition-colors"
           onClick={() => onJumpToZone && onJumpToZone(0)}
         >
-          <span className="w-2.5 h-2.5 rounded-full bg-ink-900 group-hover:bg-terracotta transition-colors" />
+          <span className="w-2 h-2 rounded-full bg-ink-900 group-hover:bg-terracotta transition-colors" />
           <span className="font-mono text-[11px] sm:text-xs font-semibold tracking-widest uppercase">
             TANISHK SINGHAL
           </span>
         </Link>
 
         {/* Navigation Links */}
-        <div className="flex items-center gap-4 sm:gap-6 text-[11px] sm:text-xs font-mono text-stone-600">
+        <div className="flex items-center gap-3 sm:gap-6 text-[10px] sm:text-xs font-mono text-stone-600">
           <Link
             to="/about"
-            className="hover:text-ink-900 transition-colors uppercase tracking-wider underline underline-offset-4"
+            className="hidden sm:inline-block hover:text-ink-900 transition-colors uppercase tracking-wider underline underline-offset-4"
           >
             Biography
           </Link>
@@ -77,7 +77,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
           </Link>
           <Link
             to="/research"
-            className="hover:text-ink-900 transition-colors uppercase tracking-wider underline underline-offset-4"
+            className="hidden sm:inline-block hover:text-ink-900 transition-colors uppercase tracking-wider underline underline-offset-4"
           >
             Research
           </Link>
@@ -121,7 +121,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: roboticsOpacity,
               transform: `translateY(${(1 - roboticsOpacity) * 20}px)`,
             }}
-            className="space-y-3 sm:space-y-4 max-w-lg pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
+            className="space-y-3 sm:space-y-4 max-w-md pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
           >
             <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
               Robotics & Manipulation
@@ -151,7 +151,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: autonomyOpacity,
               transform: `translateY(${(1 - autonomyOpacity) * 20}px)`,
             }}
-            className="space-y-3 sm:space-y-4 max-w-lg ml-auto text-right pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
+            className="space-y-3 sm:space-y-4 max-w-md ml-auto mr-0 sm:mr-12 text-right pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
           >
             <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
               Autonomous Systems
@@ -181,7 +181,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: aerospaceOpacity,
               transform: `translateY(${(1 - aerospaceOpacity) * 20}px)`,
             }}
-            className="space-y-3 sm:space-y-4 max-w-lg pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
+            className="space-y-3 sm:space-y-4 max-w-md pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
           >
             <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
               Aerospace & Space Systems
@@ -211,7 +211,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: researchOpacity,
               transform: `translateY(${(1 - researchOpacity) * 20}px)`,
             }}
-            className="space-y-3 sm:space-y-4 max-w-lg mx-auto text-center pointer-events-auto transition-transform duration-100 ease-out"
+            className="space-y-3 sm:space-y-4 max-w-md mx-auto text-center pointer-events-auto transition-transform duration-100 ease-out"
           >
             <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
               Systems Architecture & Research
@@ -241,9 +241,9 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: projectsOpacity,
               transform: `translateY(${(1 - projectsOpacity) * 20}px)`,
             }}
-            className="w-full pointer-events-auto flex flex-col items-center text-center space-y-4 sm:space-y-6 transition-transform duration-100 ease-out"
+            className="w-full pointer-events-auto flex flex-col items-center text-center space-y-3 transition-transform duration-100 ease-out mt-4 sm:mt-6 mb-auto"
           >
-            <div className="space-y-1 sm:space-y-2">
+            <div className="space-y-1">
               <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
                 Featured Engineering Work
               </span>
@@ -257,7 +257,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
 
             {/* Contextual Minimal Placard when a project is hovered or clicked */}
             {activeProject && (
-              <div className="w-full max-w-md p-5 sm:p-6 rounded-2xl bg-white/95 backdrop-blur-md border border-paper-400 shadow-editorial text-left space-y-2.5 transition-all animate-fade-in">
+              <div className="w-full max-w-md p-5 sm:p-6 rounded-2xl bg-white/95 backdrop-blur-md border border-paper-400 shadow-editorial text-left space-y-2.5 transition-all animate-fade-in mt-4">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] sm:text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-paper-200 border border-paper-300 text-ink-800 uppercase font-medium">
                     {activeProject.category}

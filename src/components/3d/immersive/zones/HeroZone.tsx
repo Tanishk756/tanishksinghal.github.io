@@ -33,8 +33,8 @@ export const HeroZone: React.FC<HeroZoneProps> = ({ reducedMotion = false }) => 
     }
   });
 
-  const position: [number, number, number] = isMobile ? [0, -0.25, 0] : [0, -0.2, 0];
-  const scale: [number, number, number] = isMobile ? [0.65, 0.65, 0.65] : [0.85, 0.85, 0.85];
+  const position: [number, number, number] = isMobile ? [0, -0.45, 0] : [0, -0.38, 0];
+  const scale: [number, number, number] = isMobile ? [0.65, 0.65, 0.65] : [0.8, 0.8, 0.8];
 
   return (
     <group position={position} scale={scale}>
@@ -55,30 +55,30 @@ export const HeroZone: React.FC<HeroZoneProps> = ({ reducedMotion = false }) => 
       </group>
 
       {/* 2. LOW-PROFILE KINETIC ENGINEERING CORE */}
-      <group position={[0, 0.35, 0]}>
-        {/* Orbital Precision Ring */}
-        <group ref={orbitalRingRef}>
+      <group position={[0, 0.22, 0]}>
+        {/* Orbital Precision Ring (Tilted Horizontally) */}
+        <group ref={orbitalRingRef} rotation={[-Math.PI / 3, 0, 0]}>
           <mesh>
-            <torusGeometry args={[0.65, 0.008, 16, 48]} />
+            <torusGeometry args={[0.55, 0.006, 16, 48]} />
             <meshStandardMaterial color="#57534e" roughness={0.3} metalness={0.7} />
           </mesh>
         </group>
 
         {/* Inner Articulated Gimbal */}
-        <group ref={innerCoreRef}>
-          <mesh rotation={[Math.PI / 4, 0, 0]}>
-            <torusGeometry args={[0.45, 0.006, 16, 48]} />
+        <group ref={innerCoreRef} rotation={[-Math.PI / 4, 0, 0]}>
+          <mesh>
+            <torusGeometry args={[0.38, 0.005, 16, 48]} />
             <meshStandardMaterial color="#c2410c" roughness={0.2} metalness={0.6} />
           </mesh>
           <mesh>
-            <sphereGeometry args={[0.06, 24, 24]} />
+            <sphereGeometry args={[0.05, 24, 24]} />
             <meshStandardMaterial color="#141517" roughness={0.2} metalness={0.9} />
           </mesh>
         </group>
 
         {/* Ground Support Pedestal Mast */}
-        <mesh position={[0, -0.18, 0]}>
-          <cylinderGeometry args={[0.015, 0.03, 0.35, 16]} />
+        <mesh position={[0, -0.11, 0]}>
+          <cylinderGeometry args={[0.012, 0.025, 0.22, 16]} />
           <meshStandardMaterial color="#292524" roughness={0.4} metalness={0.8} />
         </mesh>
       </group>
