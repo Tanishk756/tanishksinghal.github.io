@@ -46,8 +46,8 @@ export const RoboticsZone: React.FC<RoboticsZoneProps> = ({ reducedMotion = fals
     return new THREE.BufferGeometry().setFromPoints(curve.getPoints(50));
   }, []);
 
-  const position: [number, number, number] = isMobile ? [0, -0.25, -8.0] : [0.8, 0, -8.0];
-  const scale: [number, number, number] = isMobile ? [0.85, 0.85, 0.85] : [1.15, 1.15, 1.15];
+  const position: [number, number, number] = isMobile ? [0.25, 0.1, -8.0] : [0.8, 0, -8.0];
+  const scale: [number, number, number] = isMobile ? [0.95, 0.95, 0.95] : [1.15, 1.15, 1.15];
 
   return (
     <group position={position} scale={scale}>
