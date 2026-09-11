@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoboticArmArchetype } from '../../archetypes/RoboticArmArchetype';
 
@@ -12,6 +13,9 @@ interface RoboticsZoneProps {
  * Positioned at [1.1, 0, -8.0] with left-hand space for narrative typography.
  */
 export const RoboticsZone: React.FC<RoboticsZoneProps> = ({ reducedMotion = false }) => {
+  const { viewport } = useThree();
+  const isMobile = viewport.width < 5.0;
+
   const curvePoints = useMemo(() => {
     const points: THREE.Vector3[] = [];
     const segments = 40;
@@ -32,18 +36,21 @@ export const RoboticsZone: React.FC<RoboticsZoneProps> = ({ reducedMotion = fals
   // Transitional ground corridor spline connecting Zone 01 (Robotics Z: -8) -> Zone 02 (Autonomy Z: -18)
   const transitionPathGeo = useMemo(() => {
     const pts = [
-      new THREE.Vector3(0, 0.008, 0),        // At base of Robotic Arm (X: 0.8, Z: -8)
+      new THREE.Vector3(0, 0.008, 0),        // At base of Robotic Arm
       new THREE.Vector3(-0.4, 0.008, -2.5),  // Arcing outward
       new THREE.Vector3(-1.2, 0.008, -5.5),  // Traversing boundary
-      new THREE.Vector3(-1.8, 0.008, -8.0),  // Merging with rover waypoint corridor (X: -1.0, Z: -18)
+      new THREE.Vector3(-1.8, 0.008, -8.0),  // Merging with rover waypoint corridor
       new THREE.Vector3(-2.0, 0.008, -10.0), // Linking directly to Wheeled Robot origin
     ];
     const curve = new THREE.CatmullRomCurve3(pts);
     return new THREE.BufferGeometry().setFromPoints(curve.getPoints(50));
   }, []);
 
+  const position: [number, number, number] = isMobile ? [0, -0.25, -8.0] : [0.8, 0, -8.0];
+  const scale: [number, number, number] = isMobile ? [0.85, 0.85, 0.85] : [1.15, 1.15, 1.15];
+
   return (
-    <group position={[0.8, 0, -8.0]}>
+    <group position={position}>
       {/* 1. WORKSPACE WORK-ENVELOPE FLOOR MARKING */}
       <mesh position={[0, 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.75, 0.77, 36]} />

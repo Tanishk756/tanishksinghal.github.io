@@ -1,5 +1,5 @@
 import React, { useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { WheeledRobotArchetype } from '../../archetypes/WheeledRobotArchetype';
 
@@ -8,11 +8,11 @@ interface AutonomyZoneProps {
 }
 
 /**
- * Zone 02: Autonomous Systems & Nav2 Stack
- * 
- * Positioned at [-1.2, 0, -18.0] with right-hand space for narrative typography.
- */
+  * Zone 02: Autonomous Systems & Nav2 Stack
+  */
 export const AutonomyZone: React.FC<AutonomyZoneProps> = ({ reducedMotion = false }) => {
+  const { viewport } = useThree();
+  const isMobile = viewport.width < 5.0;
   const lidarBeamRef = useRef<THREE.Group>(null);
 
   useFrame((state) => {
@@ -38,8 +38,11 @@ export const AutonomyZone: React.FC<AutonomyZoneProps> = ({ reducedMotion = fals
     return new THREE.BufferGeometry().setFromPoints(pts);
   }, [pathPoints]);
 
+  const position: [number, number, number] = isMobile ? [0, -0.15, -18.0] : [-0.8, 0, -18.0];
+  const scale: [number, number, number] = isMobile ? [0.85, 0.85, 0.85] : [1.15, 1.15, 1.15];
+
   return (
-    <group position={[-0.8, 0, -18.0]}>
+    <group position={position}>
       {/* 1. AUTONOMOUS MOBILE ROBOT (ROS 2 PLATFORM) */}
       <group position={[0, 0, 0]} rotation={[0, Math.PI / 8, 0]} scale={[1.15, 1.15, 1.15]}>
         <WheeledRobotArchetype reducedMotion={reducedMotion} />
