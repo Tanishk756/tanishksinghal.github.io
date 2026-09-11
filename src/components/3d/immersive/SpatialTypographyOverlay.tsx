@@ -151,7 +151,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: autonomyOpacity,
               transform: `translateY(${(1 - autonomyOpacity) * 20}px)`,
             }}
-            className="space-y-3 sm:space-y-4 max-w-md ml-auto mr-0 sm:mr-12 text-right pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
+            className="space-y-3 sm:space-y-4 max-w-md ml-auto mr-4 sm:mr-24 text-right pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
           >
             <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
               Autonomous Systems
@@ -211,7 +211,7 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
               opacity: researchOpacity,
               transform: `translateY(${(1 - researchOpacity) * 20}px)`,
             }}
-            className="space-y-3 sm:space-y-4 max-w-md ml-auto mr-0 sm:mr-16 text-right pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
+            className="space-y-3 sm:space-y-4 max-w-md ml-auto mr-4 sm:mr-24 text-right pointer-events-auto transition-transform duration-100 ease-out bg-paper-50/85 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-4 sm:p-0 rounded-2xl sm:rounded-none border border-paper-300/50 sm:border-none shadow-xs sm:shadow-none"
           >
             <span className="text-[11px] font-mono text-terracotta uppercase tracking-widest block font-semibold">
               Systems Architecture & Research
