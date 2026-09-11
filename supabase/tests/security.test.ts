@@ -35,6 +35,7 @@ import ReactDOMServer from 'react-dom/server';
 import { normalizeSkill, normalizeResearch, normalizeProject, normalizeBlogPost } from '../../src/cms/publicContentClient';
 import { MarkdownRenderer } from '../../src/components/blog/MarkdownRenderer';
 import { SUBSYSTEMS } from '../../src/components/3d/types';
+import { mapProjectCategoryToArchetype, CAMERA_PRESETS, THEME_PALETTE } from '../../src/components/3d/core/types';
 
 // Helper to create test mock JWT tokens
 function createTestJwt(email: string, expiresInSec = 3600): string {
@@ -3446,6 +3447,68 @@ Detector -> Fusion -> Tracker -> State Estimation
   assert(
     Object.values(SUBSYSTEMS).every(s => s.name.length > 0 && s.description.length > 20),
     'All 6 digital twin subsystems contain authentic, un-fabricated technical descriptions'
+  );
+
+  // --- DOMAIN 35: GLOBAL 3D WORLD INFRASTRUCTURE & VISUAL ARCHETYPE TAXONOMY TESTS ---
+  console.log('\n--- DOMAIN 35: GLOBAL 3D WORLD INFRASTRUCTURE & VISUAL ARCHETYPE TAXONOMY TESTS ---');
+
+  assert(
+    mapProjectCategoryToArchetype('robotics') === 'wheeled-robot',
+    'Robotics project category maps to wheeled-robot 3D visual archetype'
+  );
+
+  assert(
+    mapProjectCategoryToArchetype('autonomy') === 'robotic-arm',
+    'Autonomy project category maps to robotic-arm 3D visual archetype'
+  );
+
+  assert(
+    mapProjectCategoryToArchetype('uav-aerospace') === 'uav-drone',
+    'UAV / Aerospace project category maps to uav-drone 3D visual archetype'
+  );
+
+  assert(
+    mapProjectCategoryToArchetype('space-systems') === 'cubesat-satellite',
+    'Space Systems project category maps to cubesat-satellite 3D visual archetype'
+  );
+
+  assert(
+    mapProjectCategoryToArchetype('embedded') === 'embedded-pcb',
+    'Embedded project category maps to embedded-pcb 3D visual archetype'
+  );
+
+  assert(
+    mapProjectCategoryToArchetype('ai-ml') === 'systems-pipeline',
+    'AI / ML project category maps to systems-pipeline 3D visual archetype'
+  );
+
+  assert(
+    mapProjectCategoryToArchetype('software-tools') === 'systems-pipeline',
+    'Software & Tools project category maps to systems-pipeline 3D visual archetype'
+  );
+
+  assert(
+    mapProjectCategoryToArchetype('unknown-category') === 'wheeled-robot',
+    'Unknown project category safely defaults to wheeled-robot archetype fallback'
+  );
+
+  assert(
+    Object.keys(CAMERA_PRESETS).length === 5 &&
+    CAMERA_PRESETS['world-hub'] &&
+    CAMERA_PRESETS['robotics'] &&
+    CAMERA_PRESETS['aerospace'] &&
+    CAMERA_PRESETS['systems'] &&
+    CAMERA_PRESETS['electronics'],
+    'Global camera director defines standardized presets for all 5 world zones'
+  );
+
+  assert(
+    THEME_PALETTE.background === '#fbfaf7' &&
+    THEME_PALETTE.graphite === '#141517' &&
+    THEME_PALETTE.terracotta === '#c2410c' &&
+    THEME_PALETTE.stone === '#8c827a' &&
+    THEME_PALETTE.paperSurface === '#edeae4',
+    'Global 3D theme palette matches the portfolio editorial design system without cyberpunk neon'
   );
 
   // CLEANUP: Clean all temporary synthetic test records from memory
