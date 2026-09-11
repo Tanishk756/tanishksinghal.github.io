@@ -29,8 +29,8 @@ export const WORLD_ZONES: ZoneDefinition[] = [
     progressEnd: 0.31,
     cameraKeyframe: {
       progress: 0.23,
-      position: new THREE.Vector3(-0.5, 1.3, -5.2),
-      target: new THREE.Vector3(0.6, 0.75, -8.0),
+      position: new THREE.Vector3(-0.9, 1.35, -5.5),
+      target: new THREE.Vector3(0.8, 0.75, -8.0),
       fov: 38,
     },
     ctaText: 'VIEW ROBOTICS MONOGRAPHS',
@@ -46,8 +46,8 @@ export const WORLD_ZONES: ZoneDefinition[] = [
     progressEnd: 0.47,
     cameraKeyframe: {
       progress: 0.40,
-      position: new THREE.Vector3(0.5, 1.3, -15.2),
-      target: new THREE.Vector3(-1.2, 0.7, -18.0),
+      position: new THREE.Vector3(0.9, 1.25, -15.5),
+      target: new THREE.Vector3(-0.8, 0.55, -18.0),
       fov: 38,
     },
     ctaText: 'EXPLORE AUTONOMY STACK',
@@ -63,8 +63,8 @@ export const WORLD_ZONES: ZoneDefinition[] = [
     progressEnd: 0.63,
     cameraKeyframe: {
       progress: 0.55,
-      position: new THREE.Vector3(-0.3, 2.2, -25.0),
-      target: new THREE.Vector3(1.2, 1.6, -28.0),
+      position: new THREE.Vector3(-0.6, 2.3, -25.5),
+      target: new THREE.Vector3(0.8, 1.5, -28.0),
       fov: 38,
     },
     ctaText: 'VIEW AEROSPACE CASE STUDIES',

@@ -29,35 +29,58 @@ export const RoboticsZone: React.FC<RoboticsZoneProps> = ({ reducedMotion = fals
     return new THREE.BufferGeometry().setFromPoints(curvePoints);
   }, [curvePoints]);
 
+  // Transitional ground corridor spline connecting Zone 01 (Robotics Z: -8) -> Zone 02 (Autonomy Z: -18)
+  const transitionPathGeo = useMemo(() => {
+    const pts = [
+      new THREE.Vector3(0, 0.008, 0),        // At base of Robotic Arm (X: 0.8, Z: -8)
+      new THREE.Vector3(-0.4, 0.008, -2.5),  // Arcing outward
+      new THREE.Vector3(-1.2, 0.008, -5.5),  // Traversing boundary
+      new THREE.Vector3(-1.8, 0.008, -8.0),  // Merging with rover waypoint corridor (X: -1.0, Z: -18)
+      new THREE.Vector3(-2.0, 0.008, -10.0), // Linking directly to Wheeled Robot origin
+    ];
+    const curve = new THREE.CatmullRomCurve3(pts);
+    return new THREE.BufferGeometry().setFromPoints(curve.getPoints(50));
+  }, []);
+
   return (
-    <group position={[1.1, 0, -8.0]}>
+    <group position={[0.8, 0, -8.0]}>
       {/* 1. WORKSPACE WORK-ENVELOPE FLOOR MARKING */}
       <mesh position={[0, 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.75, 0.77, 36]} />
         <meshBasicMaterial color="#e7e5e4" side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Degree Ticks */}
+      {/* Degree Ticks & Coordinate Alignment Radial Lines */}
       {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => {
         const rad = (deg * Math.PI) / 180;
         return (
-          <mesh
-            key={deg}
-            position={[Math.cos(rad) * 0.76, 0.006, Math.sin(rad) * 0.76]}
-          >
-            <circleGeometry args={[0.015, 8]} />
-            <meshBasicMaterial color={deg === 0 || deg === 180 ? '#c2410c' : '#a8a29e'} />
-          </mesh>
+          <group key={deg}>
+            <mesh position={[Math.cos(rad) * 0.76, 0.006, Math.sin(rad) * 0.76]}>
+              <circleGeometry args={[0.015, 8]} />
+              <meshBasicMaterial color={deg === 0 || deg === 180 ? '#c2410c' : '#a8a29e'} />
+            </mesh>
+            {/* Radial Datum Whisker */}
+            <mesh
+              position={[Math.cos(rad) * 0.82, 0.005, Math.sin(rad) * 0.82]}
+              rotation={[-Math.PI / 2, 0, rad]}
+            >
+              <planeGeometry args={[0.08, 0.002]} />
+              <meshBasicMaterial color="#d6d3d1" />
+            </mesh>
+          </group>
         );
       })}
 
       {/* 2. ARTICULATED 6-DOF ROBOTIC MANIPULATOR */}
-      <group position={[0, 0, 0]} scale={[1.1, 1.1, 1.1]}>
+      <group position={[0, 0, 0]} scale={[1.15, 1.15, 1.15]}>
         <RoboticArmArchetype reducedMotion={reducedMotion} />
       </group>
 
       {/* 3. 3D END-EFFECTOR TRAJECTORY TOOL-PATH */}
-      <primitive object={new THREE.Line(curveGeo, new THREE.LineBasicMaterial({ color: '#c2410c', transparent: true, opacity: 0.7 }))} position={[0, 0.2, 0]} />
+      <primitive
+        object={new THREE.Line(curveGeo, new THREE.LineBasicMaterial({ color: '#c2410c', transparent: true, opacity: 0.75 }))}
+        position={[0, 0.2, 0]}
+      />
 
       {/* 4. TRAJECTORY WAYPOINT NODES */}
       {curvePoints.filter((_, idx) => idx % 8 === 0).map((pt, i) => (
@@ -66,6 +89,11 @@ export const RoboticsZone: React.FC<RoboticsZoneProps> = ({ reducedMotion = fals
           <meshBasicMaterial color="#141517" />
         </mesh>
       ))}
+
+      {/* 5. ROBOTICS -> AUTONOMY PHYSICAL TRANSITIONAL PATH LINE */}
+      <primitive
+        object={new THREE.Line(transitionPathGeo, new THREE.LineDashedMaterial({ color: '#c2410c', dashSize: 0.2, gapSize: 0.1, transparent: true, opacity: 0.6 }))}
+      />
     </group>
   );
 };
