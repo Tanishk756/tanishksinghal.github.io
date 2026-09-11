@@ -12,8 +12,8 @@ export const WORLD_ZONES: ZoneDefinition[] = [
     progressEnd: 0.14,
     cameraKeyframe: {
       progress: 0.0,
-      position: new THREE.Vector3(0, 1.45, 4.8),
-      target: new THREE.Vector3(0.0, 0.85, 0.0),
+      position: new THREE.Vector3(0, 1.2, 4.8),
+      target: new THREE.Vector3(0.0, 0.35, 0.0),
       fov: 38,
     },
     ctaText: 'EXPLORE CASE STUDIES',

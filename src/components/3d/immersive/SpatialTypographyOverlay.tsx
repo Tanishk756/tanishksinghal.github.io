@@ -87,41 +87,30 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
           <div
             style={{
               opacity: heroOpacity,
-              transform: `translateY(${(1 - heroOpacity) * 24}px)`,
+              transform: `translateY(${(1 - heroOpacity) * -20}px)`,
             }}
-            className="w-full flex flex-col items-center text-center space-y-4 sm:space-y-6 pointer-events-auto transition-transform duration-100 ease-out"
+            className="w-full flex flex-col items-center text-center space-y-2 sm:space-y-3 pointer-events-auto transition-transform duration-100 ease-out mt-2 sm:mt-6 mb-auto"
           >
             {/* Architectural Sub-header */}
-            <div className="inline-flex items-center gap-2.5 px-3.5 py-1 rounded-full bg-paper-200/90 backdrop-blur-md border border-paper-400 text-ink-700 text-[10px] sm:text-xs font-mono uppercase tracking-widest shadow-xs">
+            <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-paper-200/90 backdrop-blur-md border border-paper-400 text-ink-700 text-[10px] sm:text-xs font-mono uppercase tracking-widest shadow-xs">
               <span className="w-1.5 h-1.5 rounded-full bg-terracotta animate-pulse" />
               <span>SPATIAL LABORATORY // 00 DATUM</span>
             </div>
 
             {/* Monumental Headline */}
-            <div className="space-y-1 sm:space-y-2">
-              <h1 className="text-4xl sm:text-7xl lg:text-8xl font-display font-extrabold tracking-tight text-ink-900 uppercase leading-[0.9]">
+            <div className="space-y-0.5 sm:space-y-1">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-ink-900 uppercase leading-none">
                 TANISHK SINGHAL
               </h1>
-              <p className="text-sm sm:text-lg lg:text-xl text-ink-700 font-serifDisplay italic tracking-normal max-w-2xl mx-auto">
+              <p className="text-xs sm:text-base lg:text-lg text-ink-700 font-serifDisplay italic tracking-normal max-w-xl mx-auto">
                 Robotics Researcher & Autonomous Systems Engineer
               </p>
             </div>
 
             {/* Engineering Mission Statement */}
-            <p className="text-xs sm:text-sm text-ink-600 font-sans max-w-xl mx-auto leading-relaxed px-4">
-              {profile?.headline || 'Autonomous mobile navigation, closed-loop ROS 2 kinematic control, embedded firmware architectures, and applied machine learning.'}
+            <p className="text-[11px] sm:text-xs text-ink-600 font-sans max-w-md mx-auto leading-relaxed px-4 hidden sm:block">
+              {profile?.headline || 'Autonomous mobile navigation, closed-loop ROS 2 kinematics, embedded firmware architectures, and applied perception.'}
             </p>
-
-            {/* Spatial Navigation Indicator */}
-            <div className="pt-2 flex flex-col items-center gap-3">
-              <button
-                onClick={() => onJumpToZone && onJumpToZone(1)}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-ink-900 text-paper-100 hover:bg-ink-800 text-xs font-sans font-semibold tracking-wider uppercase transition-all shadow-md active:scale-[0.98] cursor-pointer"
-              >
-                <span>ENTER SPATIAL WORLD</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
           </div>
         )}
 
