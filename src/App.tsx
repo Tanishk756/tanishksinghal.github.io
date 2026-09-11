@@ -52,6 +52,7 @@ const AdminHistoryPage = lazy(() => import('./pages/admin/AdminHistoryPage').the
 const AppContent = () => {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
+  const isHome = location.pathname === '/';
 
   return (
     <div className={`min-h-screen flex flex-col selection:bg-[#141517] selection:text-[#fbfaf7] ${
@@ -65,8 +66,8 @@ const AppContent = () => {
         Skip to main content
       </a>
 
-      {/* Public Navigation Header (Omitted for /admin) */}
-      {!isAdmin && <Navbar />}
+      {/* Public Navigation Header (Omitted for /admin and /) */}
+      {!isAdmin && !isHome && <Navbar />}
 
       {/* Dynamic Route Content */}
       <main id="main-content" tabIndex={-1} className="flex-1 relative z-10 focus:outline-none">
@@ -124,8 +125,8 @@ const AppContent = () => {
         </ErrorBoundary>
       </main>
 
-      {/* Public Footer (Omitted for /admin) */}
-      {!isAdmin && <Footer />}
+      {/* Public Footer (Omitted for /admin and /) */}
+      {!isAdmin && !isHome && <Footer />}
     </div>
   );
 };

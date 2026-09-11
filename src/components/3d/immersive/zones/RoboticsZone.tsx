@@ -1,0 +1,71 @@
+import React, { useMemo } from 'react';
+import * as THREE from 'three';
+import { RoboticArmArchetype } from '../../archetypes/RoboticArmArchetype';
+
+interface RoboticsZoneProps {
+  reducedMotion?: boolean;
+}
+
+/**
+ * Zone 01: Robotics Studio & Kinematics
+ * 
+ * Positioned at [1.1, 0, -8.0] with left-hand space for narrative typography.
+ */
+export const RoboticsZone: React.FC<RoboticsZoneProps> = ({ reducedMotion = false }) => {
+  const curvePoints = useMemo(() => {
+    const points: THREE.Vector3[] = [];
+    const segments = 40;
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      const x = Math.sin(theta) * 0.45;
+      const y = 0.35 + Math.sin(theta * 2) * 0.12;
+      const z = Math.cos(theta) * 0.35;
+      points.push(new THREE.Vector3(x, y, z));
+    }
+    return points;
+  }, []);
+
+  const curveGeo = useMemo(() => {
+    return new THREE.BufferGeometry().setFromPoints(curvePoints);
+  }, [curvePoints]);
+
+  return (
+    <group position={[1.1, 0, -8.0]}>
+      {/* 1. WORKSPACE WORK-ENVELOPE FLOOR MARKING */}
+      <mesh position={[0, 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.75, 0.77, 36]} />
+        <meshBasicMaterial color="#e7e5e4" side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Degree Ticks */}
+      {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => {
+        const rad = (deg * Math.PI) / 180;
+        return (
+          <mesh
+            key={deg}
+            position={[Math.cos(rad) * 0.76, 0.006, Math.sin(rad) * 0.76]}
+          >
+            <circleGeometry args={[0.015, 8]} />
+            <meshBasicMaterial color={deg === 0 || deg === 180 ? '#c2410c' : '#a8a29e'} />
+          </mesh>
+        );
+      })}
+
+      {/* 2. ARTICULATED 6-DOF ROBOTIC MANIPULATOR */}
+      <group position={[0, 0, 0]} scale={[1.1, 1.1, 1.1]}>
+        <RoboticArmArchetype reducedMotion={reducedMotion} />
+      </group>
+
+      {/* 3. 3D END-EFFECTOR TRAJECTORY TOOL-PATH */}
+      <primitive object={new THREE.Line(curveGeo, new THREE.LineBasicMaterial({ color: '#c2410c', transparent: true, opacity: 0.7 }))} position={[0, 0.2, 0]} />
+
+      {/* 4. TRAJECTORY WAYPOINT NODES */}
+      {curvePoints.filter((_, idx) => idx % 8 === 0).map((pt, i) => (
+        <mesh key={i} position={[pt.x, pt.y + 0.2, pt.z]}>
+          <sphereGeometry args={[0.02, 12, 12]} />
+          <meshBasicMaterial color="#141517" />
+        </mesh>
+      ))}
+    </group>
+  );
+};
