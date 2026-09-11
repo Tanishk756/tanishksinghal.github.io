@@ -82,43 +82,45 @@ export const SpatialTypographyOverlay: React.FC<SpatialTypographyOverlayProps> =
       {/* 2. DYNAMIC SPATIAL NARRATIVE SECTIONS */}
       <div className="relative w-full max-w-7xl mx-auto flex-1 flex items-center my-auto">
         
-        {/* --- ZONE 00: OPENING / HERO --- */}
+        {/* --- ZONE 00: OPENING / MONUMENTAL SPATIAL LAB --- */}
         {heroOpacity > 0.01 && (
           <div
             style={{
               opacity: heroOpacity,
-              transform: `translateY(${(1 - heroOpacity) * 20}px)`,
+              transform: `translateY(${(1 - heroOpacity) * 24}px)`,
             }}
-            className="space-y-4 sm:space-y-6 max-w-xl pointer-events-auto transition-transform duration-100 ease-out"
+            className="w-full flex flex-col items-center text-center space-y-4 sm:space-y-6 pointer-events-auto transition-transform duration-100 ease-out"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-paper-200/90 backdrop-blur-xs border border-paper-400 text-ink-700 text-[10px] sm:text-xs font-mono uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-terracotta" />
-              <span>ROBOTICS RESEARCH & AUTONOMOUS SYSTEMS</span>
+            {/* Architectural Sub-header */}
+            <div className="inline-flex items-center gap-2.5 px-3.5 py-1 rounded-full bg-paper-200/90 backdrop-blur-md border border-paper-400 text-ink-700 text-[10px] sm:text-xs font-mono uppercase tracking-widest shadow-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-terracotta animate-pulse" />
+              <span>SPATIAL LABORATORY // 00 DATUM</span>
             </div>
 
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-display font-extrabold tracking-tight text-ink-900 leading-[0.95]">
-              TANISHK<br />
-              <span className="font-serifDisplay italic font-normal text-ink-700">Singhal</span>
-            </h1>
+            {/* Monumental Headline */}
+            <div className="space-y-1 sm:space-y-2">
+              <h1 className="text-4xl sm:text-7xl lg:text-8xl font-display font-extrabold tracking-tight text-ink-900 uppercase leading-[0.9]">
+                TANISHK SINGHAL
+              </h1>
+              <p className="text-sm sm:text-lg lg:text-xl text-ink-700 font-serifDisplay italic tracking-normal max-w-2xl mx-auto">
+                Robotics Researcher & Autonomous Systems Engineer
+              </p>
+            </div>
 
-            <p className="text-sm sm:text-base lg:text-lg text-ink-600 font-serifDisplay italic max-w-lg leading-relaxed">
-              "{profile?.headline || 'Autonomous mobile navigation, closed-loop ROS 2 kinematic control, embedded firmware architectures, and applied machine learning.'}"
+            {/* Engineering Mission Statement */}
+            <p className="text-xs sm:text-sm text-ink-600 font-sans max-w-xl mx-auto leading-relaxed px-4">
+              {profile?.headline || 'Autonomous mobile navigation, closed-loop ROS 2 kinematic control, embedded firmware architectures, and applied machine learning.'}
             </p>
 
-            <div className="flex flex-wrap items-center gap-3 pt-1">
+            {/* Spatial Navigation Indicator */}
+            <div className="pt-2 flex flex-col items-center gap-3">
               <button
                 onClick={() => onJumpToZone && onJumpToZone(1)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-ink-900 text-paper-100 hover:bg-ink-800 text-xs font-sans font-semibold tracking-wide uppercase transition-all shadow-sm active:scale-[0.98]"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-ink-900 text-paper-100 hover:bg-ink-800 text-xs font-sans font-semibold tracking-wider uppercase transition-all shadow-md active:scale-[0.98] cursor-pointer"
               >
-                <span>ENTER WORLD</span>
+                <span>ENTER SPATIAL WORLD</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
-              <Link
-                to="/projects"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/90 backdrop-blur-xs border border-paper-400 text-ink-800 hover:bg-paper-100 text-xs font-sans font-semibold tracking-wide uppercase transition-all shadow-xs"
-              >
-                <span>READ ARCHIVE</span>
-              </Link>
             </div>
           </div>
         )}

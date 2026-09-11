@@ -12,9 +12,9 @@ export const WORLD_ZONES: ZoneDefinition[] = [
     progressEnd: 0.14,
     cameraKeyframe: {
       progress: 0.0,
-      position: new THREE.Vector3(0, 1.4, 4.2),
-      target: new THREE.Vector3(0.5, 0.7, 0.0),
-      fov: 40,
+      position: new THREE.Vector3(0, 1.45, 4.8),
+      target: new THREE.Vector3(0.0, 0.85, 0.0),
+      fov: 38,
     },
     ctaText: 'EXPLORE CASE STUDIES',
     ctaLink: '/projects',
@@ -29,8 +29,8 @@ export const WORLD_ZONES: ZoneDefinition[] = [
     progressEnd: 0.31,
     cameraKeyframe: {
       progress: 0.23,
-      position: new THREE.Vector3(-0.4, 1.3, -5.2),
-      target: new THREE.Vector3(1.1, 0.75, -8.0),
+      position: new THREE.Vector3(-0.5, 1.3, -5.2),
+      target: new THREE.Vector3(0.6, 0.75, -8.0),
       fov: 38,
     },
     ctaText: 'VIEW ROBOTICS MONOGRAPHS',

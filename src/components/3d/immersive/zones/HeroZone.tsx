@@ -38,8 +38,8 @@ export const HeroZone: React.FC<HeroZoneProps> = ({ reducedMotion = false }) => 
     }
   });
 
-  const position: [number, number, number] = isMobile ? [0.1, 1.3, -1.2] : [1.2, 0.75, 0];
-  const scale: [number, number, number] = isMobile ? [0.55, 0.55, 0.55] : [0.85, 0.85, 0.85];
+  const position: [number, number, number] = isMobile ? [0, 0.95, -0.2] : [0, 0.85, 0];
+  const scale: [number, number, number] = isMobile ? [0.72, 0.72, 0.72] : [1.0, 1.0, 1.0];
 
   return (
     <group position={position} scale={scale}>
