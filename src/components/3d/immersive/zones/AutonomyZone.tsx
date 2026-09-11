@@ -22,14 +22,14 @@ export const AutonomyZone: React.FC<AutonomyZoneProps> = ({ reducedMotion = fals
     }
   });
 
-  // Waypoint Path Spline for Autonomous Rover
+  // Waypoint Path Spline for Autonomous Rover (Confined to left half)
   const pathPoints = useMemo(() => [
-    new THREE.Vector3(-1.4, 0.05, 3.5),   // Entry from Zone 01 transition
-    new THREE.Vector3(-0.6, 0.05, 1.8),
-    new THREE.Vector3(0.0, 0.05, 0.0),    // Current Robot Pose
-    new THREE.Vector3(0.5, 0.05, -1.5),   // Local planner avoidance
-    new THREE.Vector3(0.2, 0.05, -3.2),   // Waypoint 4
-    new THREE.Vector3(-0.2, 0.05, -4.8),  // Transition towards Aerospace Launch Datum
+    new THREE.Vector3(-0.8, 0.05, 3.5),
+    new THREE.Vector3(-0.4, 0.05, 1.8),
+    new THREE.Vector3(0.0, 0.05, 0.0),    // Current Robot Pose (Root is at X: -1.4)
+    new THREE.Vector3(-0.3, 0.05, -1.5),
+    new THREE.Vector3(-0.5, 0.05, -3.2),
+    new THREE.Vector3(-0.2, 0.05, -4.8),
   ], []);
 
   const curveGeo = useMemo(() => {
@@ -51,11 +51,11 @@ export const AutonomyZone: React.FC<AutonomyZoneProps> = ({ reducedMotion = fals
       {/* 2. ROTATING 360° LIDAR PERCEPTION SCAN FAN */}
       <group ref={lidarBeamRef} position={[0, 0.42, 0]}>
         <mesh rotation={[-Math.PI / 2, 0, 0]}>
-          <coneGeometry args={[1.8, 0.01, 16, 1, true, 0, Math.PI / 3]} />
+          <coneGeometry args={[1.6, 0.01, 16, 1, true, 0, Math.PI / 3]} />
           <meshBasicMaterial color="#c2410c" transparent opacity={0.14} side={THREE.DoubleSide} />
         </mesh>
-        <mesh position={[1.4, 0, 0]}>
-          <boxGeometry args={[0.1, 0.005, 0.005]} />
+        <mesh position={[1.2, 0, 0]}>
+          <boxGeometry args={[0.08, 0.005, 0.005]} />
           <meshBasicMaterial color="#c2410c" />
         </mesh>
       </group>
@@ -80,13 +80,13 @@ export const AutonomyZone: React.FC<AutonomyZoneProps> = ({ reducedMotion = fals
       ))}
 
       {/* 5. SPATIAL OBSTACLES DETECTED BY SLAM */}
-      <group position={[0.9, 0.12, -1.0]}>
+      <group position={[0.4, 0.12, -1.0]}>
         <mesh>
-          <boxGeometry args={[0.25, 0.24, 0.25]} />
+          <boxGeometry args={[0.22, 0.22, 0.22]} />
           <meshBasicMaterial color="#e7e5e4" wireframe />
         </mesh>
       </group>
-      <group position={[-1.1, 0.1, -0.6]}>
+      <group position={[-0.9, 0.1, -0.6]}>
         <mesh>
           <cylinderGeometry args={[0.12, 0.12, 0.2, 12]} />
           <meshBasicMaterial color="#e7e5e4" wireframe />

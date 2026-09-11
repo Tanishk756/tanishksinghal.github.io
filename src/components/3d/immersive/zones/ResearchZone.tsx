@@ -13,20 +13,20 @@ interface ResearchZoneProps {
  */
 export const ResearchZone: React.FC<ResearchZoneProps> = ({ reducedMotion = false }) => {
   return (
-    <group position={[-1.2, 0.6, -58.0]}>
+    <group position={[-1.5, 0.6, -58.0]}>
       {/* 1. DISTRIBUTED SYSTEMS PIPELINE NODE GRAPH */}
-      <group position={[-0.3, 0.3, 0]} scale={[1.1, 1.1, 1.1]}>
+      <group position={[-0.5, 0.3, 0]} scale={[1.0, 1.0, 1.0]}>
         <SystemsPipelineArchetype reducedMotion={reducedMotion} />
       </group>
 
       {/* 2. REAL-TIME EMBEDDED PCB HARDWARE PLATFORM */}
-      <group position={[1.1, 0.1, -0.4]} rotation={[-Math.PI / 4, Math.PI / 6, 0]} scale={[0.9, 0.9, 0.9]}>
+      <group position={[0.4, 0.0, -0.2]} rotation={[-Math.PI / 4, Math.PI / 6, 0]} scale={[0.8, 0.8, 0.8]}>
         <PCBArchetype reducedMotion={reducedMotion} />
       </group>
 
       {/* 3. HARDWARE-IN-THE-LOOP INTERCONNECT DATA BUS */}
-      <mesh position={[0.35, 0.2, -0.2]} rotation={[0, 0, Math.PI / 4]}>
-        <cylinderGeometry args={[0.004, 0.004, 1.0, 8]} />
+      <mesh position={[-0.05, 0.15, -0.1]} rotation={[0, 0, Math.PI / 4]}>
+        <cylinderGeometry args={[0.004, 0.004, 0.8, 8]} />
         <meshBasicMaterial color="#c2410c" transparent opacity={0.6} />
       </mesh>
     </group>
