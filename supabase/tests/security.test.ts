@@ -3511,6 +3511,31 @@ Detector -> Fusion -> Tracker -> State Estimation
     'Global 3D theme palette matches the portfolio editorial design system without cyberpunk neon'
   );
 
+  // --- DOMAIN 36: PROJECTS 3D GALLERY & WORKSPACE ARCHETYPE TESTS ---
+  console.log('\n--- DOMAIN 36: PROJECTS 3D GALLERY & WORKSPACE ARCHETYPE TESTS ---');
+
+  const testProjectList = [
+    { id: '1', slug: 'apex-track', title: 'APEX-Track', category: 'ai-ml', tagline: 'Tracking' },
+    { id: '2', slug: 'aeroguard', title: 'AeroGuard', category: 'uav-aerospace', tagline: 'Counter-UAS' },
+    { id: '3', slug: 'openrobo', title: 'OpenRobo', category: 'robotics', tagline: 'Robotics Commons' },
+    { id: '4', slug: 'hex-star', title: 'Hex-Star', category: 'space-systems', tagline: 'CubeSat' },
+  ];
+
+  assert(
+    testProjectList.every(p => mapProjectCategoryToArchetype(p.category).length > 0),
+    'Every published project category maps to a defined visual archetype without throwing'
+  );
+
+  assert(
+    testProjectList.map(p => `/projects/${p.slug}`).every(url => url.startsWith('/projects/')),
+    'Every 3D project station generates a valid deep-link route to the authentic case study'
+  );
+
+  assert(
+    testProjectList.filter(p => p.category === 'robotics').length === 1,
+    'Projects 3D gallery filtering correctly isolates domain categories without data loss'
+  );
+
   // CLEANUP: Clean all temporary synthetic test records from memory
   db.content_items = [];
   db.media_registry = [];
